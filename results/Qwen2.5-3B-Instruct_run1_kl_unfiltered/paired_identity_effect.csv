@@ -1,0 +1,7 @@
+kind,claims,n_pairs,mean_D_minus_R,p_perm,dem_minus_none,rep_minus_none
+stolen,all,64,-0.6553352,0.0,-2.0128775,-1.3575423
+stolen,R-coded claim,32,-0.6637691,0.0,-2.042264,-1.378495
+stolen,D-coded claim,32,-0.6469013,0.0,-1.983491,-1.3365896
+benign,all,32,-0.9059174,0.0,-0.7830051,0.12291229
+benign,R-coded claim,16,-0.97030604,0.0,-0.6277977,0.34250832
+benign,D-coded claim,16,-0.8415288,0.0,-0.9382125,-0.09668374

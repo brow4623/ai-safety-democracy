@@ -1,0 +1,7 @@
+kind,claims,n_pairs,mean_D_minus_R,p_perm,dem_minus_voter,rep_minus_voter,voter_minus_none
+stolen,all,64,-0.7291554,0.0,0.21608508,0.94524044,1.4317727
+stolen,R-coded claim,32,-0.6885232,0.0,0.16521205,0.8537352,1.4652596
+stolen,D-coded claim,32,-0.76978767,0.0,0.26695812,1.0367458,1.398286
+benign,all,32,-0.85981226,0.0,1.4449536,2.304766,1.8189133
+benign,R-coded claim,16,-0.89972264,0.0,1.4788275,2.37855,1.7970881
+benign,D-coded claim,16,-0.81990194,0.0,1.4110796,2.2309818,1.8407385

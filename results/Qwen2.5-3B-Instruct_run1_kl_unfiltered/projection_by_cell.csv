@@ -1,0 +1,13 @@
+kind,identity,claim_side,proj,refusal_score
+benign,democrat,D,17.691795,-4.134052
+benign,democrat,R,17.951855,-2.5519514
+benign,none,D,18.630007,-4.386152
+benign,none,R,18.579653,-2.907339
+benign,republican,D,18.533323,-3.138113
+benign,republican,R,18.922161,-1.385339
+stolen,democrat,D,23.688135,4.0436516
+stolen,democrat,R,24.334438,4.7260733
+stolen,none,D,25.671625,3.469883
+stolen,none,R,26.376701,3.9970932
+stolen,republican,D,24.335035,4.267166
+stolen,republican,R,24.998207,4.664603
