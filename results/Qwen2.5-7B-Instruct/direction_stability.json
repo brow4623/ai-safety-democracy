@@ -1,0 +1,7 @@
+{
+  "bootstrap_cos_mean": 0.9987910431623459,
+  "bootstrap_cos_p05": 0.998078578710556,
+  "bootstrap_cos_min": 0.9976491928100586,
+  "split_half_cos": 0.995904266834259,
+  "n_boot": 100
+}

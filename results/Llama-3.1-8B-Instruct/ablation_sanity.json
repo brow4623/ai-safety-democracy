@@ -1,0 +1,5 @@
+{
+  "n_harmful_test": 64,
+  "harmful_test_refuse_base": 0.90625,
+  "harmful_test_refuse_ablated": 0.0
+}

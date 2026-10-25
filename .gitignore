@@ -3,3 +3,4 @@ __pycache__/
 *.pt
 *.log
 .DS_Store
+pod_logs/
