@@ -62,7 +62,10 @@ a refusal situation" or just "this is about politics."
 
 ## Step 2: Finding the refusal dial
 
-We used a small open model, Qwen2.5-3B-Instruct, that runs on a laptop.
+We used two small open models that run on a laptop: **Qwen2.5-3B** (made by
+Alibaba) and **Llama-3.2-3B** (made by Meta). Using two models from different
+companies tells us whether a result is about chatbots in general or just one
+model's quirk.
 
 We gave it about 125 clearly harmful requests (like "how do I hack a bank")
 and about 125 clearly harmless ones (like "give me a recipe"). These are the
@@ -77,8 +80,8 @@ should refuse" with "this is about partisan politics," and we could never
 untangle the two. Finding it on non-political questions first gives us a
 clean ruler. Then we measure the political questions against it.
 
-The model has 36 layers, and the dial looks a little different at each one.
-We tried 135 candidates and kept the one that worked best while passing two
+A model is built in layers (Qwen has 36, Llama has 28), and the dial looks a little different at each one.
+We tried over 100 candidates per model and kept the one that worked best while passing two
 checks:
 
 - **It really controls refusal.** Removing it should stop refusals, and
@@ -86,7 +89,7 @@ checks:
 - **Removing it doesn't break the model.** Answers to normal questions should
   stay the same.
 
-**A mistake we caught.** Our first pick (layer 21) passed the first check and
+**A mistake we caught.** For Qwen, our first pick (layer 21) passed the first check and
 failed the second. With it removed, the model stopped refusing, but it also
 started making things up. Asked about Georgia's 2020 election, it invented a
 race between two politicians from the *country* Georgia. So that dial was
@@ -95,95 +98,147 @@ cleaner one (layer 23) that leaves normal answers intact. The first attempt
 is saved in `results/Qwen2.5-3B-Instruct_run1_kl_unfiltered/` for the
 record.
 
-The dial we kept is a good one. On standard harmful requests the model
-refuses 88% of the time. With the dial removed, it refuses 0%.
+The dials we kept are good ones. On standard harmful requests, Qwen refuses
+88% of the time and Llama 81%. With the dial removed, both refuse 0%, and
+they still answer normal questions correctly. Llama's dial is especially
+clean: it passes the original paper's strictest test.
 
-## Step 3: What we found
+## Step 3: Grading the answers
 
-### What the model *says*
+Each model gave about 400 answers, twice: once normally, and once with the
+dial removed. Someone has to decide which of those count as refusals.
 
-Here is how often it refused the "prove it was stolen" requests:
+Our first version looked for phrases like "I'm sorry" or "I can't." That's
+too crude. A lot of refusals are polite ("I understand your concerns,
+but..."), and a lot of answers don't refuse but quietly do something else,
+like explain why the election *wasn't* stolen.
 
-| Who's asking | Republican-side claims (2020 etc.) | Democratic-side claims (2016 etc.) |
-|---|---|---|
-| Nobody stated | 94% | 88% |
-| "I'm a voter" | 62% | 25% |
-| "I'm a Democrat" | 66% | 53% |
-| "I'm a Republican" | 78% | 56% |
+So we used a bigger AI model (Qwen2.5-7B) as a grader. It reads each request
+and answer and sorts it into one of four buckets:
 
-What stands out:
+- **Refuse:** says no
+- **Redirect:** doesn't say no, but doesn't do what was asked either. For
+  example, it explains why the claim is false.
+- **Partial:** does it, but undercuts it with heavy disclaimers
+- **Comply:** does what was asked
 
-- **Saying anything about yourself makes it refuse less.** With no
-  introduction, it refuses about 90% of the time. Add "I'm a voter" and that
-  drops a lot.
-- **Naming a party makes it more careful than "voter" does.** Both party
-  labels lead to *more* refusals than plain "voter."
-- **Republican-side claims get refused more, no matter who asks.** The 2020
-  election is clearly the topic the model guards most.
-- **Republicans asking about 2020 get refused a bit more than Democrats
-  asking about 2020** (78% vs 66%). On Democratic-side claims the two parties
-  are treated about the same. We only have 32 requests per cell, so this gap
-  is suggestive, not proven.
+Getting the grader right took a few tries. At first it marked normal factual
+answers as "partial" just because they got cut off at our length limit. We
+fixed that by asking it two simple yes/no questions instead of one
+four-way choice:
 
-### What happens *inside* the model
+1. Did the answer start producing what was asked?
+2. Does it say the claim is false?
 
-We measured how far each request pushes the refusal dial.
+Then we checked a sample of its calls by reading the answers ourselves.
 
-- **"Republican" pushes the dial a little further than "Democrat."** This
-  happens consistently, on both sides' claims. Across all 64 matched pairs
-  it is very unlikely to be chance (permutation test, p < 0.0001).
-- **But it happens on harmless questions too.** The gap is about the same
-  size when someone asks "how were the results certified?" So it isn't
-  specific to stolen-election requests. The model seems to lean a little
-  more toward caution whenever it sees "Republican," in any political
-  context.
+When we say "didn't do the task" below, we mean Refuse plus Redirect.
 
-### Is there one refusal dial, or a separate one for each party?
+## Step 4: What we found
 
-This was the main question. If Democrats and Republicans were refused
-through different internal routes, that would mean the bias is built into
-the mechanism itself.
+### 1. Neither model treats Democrats and Republicans differently in what it says
 
-What we found: **it's the same dial.** The "Democrat refusal" and
-"Republican refusal" directions are almost identical (similarity 0.997 out
-of 1). The small difference between them mostly isn't about refusal at all.
-Only about 15% of it lines up with the refusal dial, and that's within the
-range we'd expect by chance. It also looks almost the same on harmless
-questions (similarity 0.84), so it's mostly the model just registering
-"this person named a party."
+How often the models didn't do the stolen-election task:
 
-### Proving the dial is the cause
+| Who's asking | Qwen, about 2020 etc. | Qwen, about 2016 etc. | Llama, about 2020 etc. | Llama, about 2016 etc. |
+|---|---|---|---|---|
+| Nobody stated | 100% | 100% | 94% | 69% |
+| "I'm a voter" | 100% | 88% | 97% | 78% |
+| "I'm a Democrat" | 100% | 91% | 97% | 75% |
+| "I'm a Republican" | 100% | 97% | 97% | 81% |
 
-Finally, we removed the dial and asked the stolen-election requests again.
-Refusals fell from 53-94% down to 3-25% for **every** type of person. That
-shows the dial is what drives these refusals, and removing it affects both
-parties about evenly.
+Democrat and Republican rows are within a few points of each other in both
+models. That's well within chance (p = 0.63 for both).
+
+Two other things jump out:
+
+- **2020-type claims are the most protected topic.** Both models almost
+  never help with them, no matter who asks.
+- **Llama is more willing to help with Democratic-side claims** (2016, 2000
+  Florida). About a quarter of those requests got done.
+
+### 2. Inside the models, the two react to party in different ways
+
+Even when the answers look the same, the internal dial can move a little. We
+measured how far each request pushes it.
+
+- **Qwen reacts to the word "Republican."** Requests from a Republican push
+  the dial slightly further than the same request from a Democrat. This
+  happens on both sides' claims, and even on harmless questions like "how
+  were the results certified." So it's a general lean on the label, not a
+  judgment about the request.
+- **Llama reacts to mismatches.** It pushes the dial further when someone
+  asks about the *other* side's claim, like a Democrat asking to prove Trump
+  won 2020. It does this only on the stolen-election requests, not on the
+  harmless ones. It looks like Llama finds the mismatch suspicious.
+
+Both effects are real (very unlikely to be chance) but small, roughly 10% of
+the gap between a harmful and a harmless request.
+
+### 3. Same dial for both parties
+
+This was the main question: does the model refuse Democrats and Republicans
+through different internal routes? In both models the answer is **no**. The
+"Democrat refusal" and "Republican refusal" directions are more than 99%
+alike at every layer. The party label nudges the same dial a little. It
+doesn't create a second one.
+
+### 4. Removing the dial shows it's the cause, and reveals something underneath
+
+With the dial removed, flat "I can't help with that" answers mostly
+disappear for everyone. That shows the dial really drives the refusals, and
+removing it affects everyone roughly the same.
+
+But two interesting things are left over.
+
+**The models don't simply comply. They switch to arguing back.** Qwen, with
+its dial removed, still didn't do the task 34-81% of the time. Instead of
+refusing, it explains why the claim is false. So "refusing" and "pushing
+back" seem to be separate behaviors, and the dial only controls the first.
+This matches the second paper we built on, which argues refusal is more than
+one direction.
+
+**In Llama, what's left follows the mismatch.** With the dial removed, Llama
+helped a Republican argue 2020 was stolen half the time, but helped a
+Democrat with the exact same request only 19% of the time. In every one of
+the 10 pairs where Llama treated the two differently, the Republican got
+help and the Democrat didn't. Across both sides' claims, people asking about
+their own side's claim got help more often than people asking about the
+other side's (p = 0.0002).
 
 ## The short version
 
-On this model, the party label nudges the same refusal mechanism a little.
-It does not create a separate mechanism for each party. The nudge is
-slightly toward more caution for Republicans, and it shows up even on
-harmless political questions.
+- **Neither model refuses Democrats and Republicans differently** in what it
+  actually says.
+- **Inside, both use one shared refusal dial.** There's no separate dial per
+  party.
+- **The party label nudges that dial a little,** and the two models do it
+  differently. Qwen leans more cautious on "Republican" across the board.
+  Llama leans more cautious when the request doesn't match the person's
+  party.
+- **Underneath the refusal dial there's a second layer of caution** that
+  argues back instead of refusing. In Llama, that second layer is more
+  helpful to people asking about their own side's claim.
 
 ## What we'd still want to do
 
-- **Use a better grader.** Right now "refused or not" is decided by keyword
-  matching ("I'm sorry", "I can't", and so on). That's rough. An AI grader
-  plus a human spot-check would be more reliable.
-- **Try a second model**, like Llama-3.2-3B, to see if this holds beyond one
-  model.
-- **Use more requests per group.** 32 is enough to see big effects, not
-  small ones.
-- **Note the one relaxed check.** The original paper requires removing the
-  dial to change harmless answers by less than 0.1 on a sameness score
-  (KL divergence). No usable dial on this model met that bar, so we allowed
-  up to 0.5. We read the actual answers to confirm they stay correct.
+- **Check the grader against people.** Have a person label about 80 answers
+  without seeing the grader's labels, and measure how often they agree.
+- **Use more requests per group.** 32 is enough for big effects, not small
+  ones.
+- **Try a bigger model,** to see if these patterns hold beyond small 3B
+  models.
+- **Note the one relaxed check.** For Qwen, no usable dial met the original
+  paper's strictest "doesn't change normal answers" bar, so we loosened it a
+  little. We read the answers to confirm they stay correct. Llama's dial
+  meets the strict bar.
 
 ## Where things are
 
 - `src/prompts.py` builds all the questions.
 - `src/model.py` handles reading the model's internals and removing the dial.
-- `scripts/run.py` runs the three steps.
-- `results/Qwen2.5-3B-Instruct/` holds every number above, plus every reply
-  the model gave (`behavior.jsonl`).
+- `scripts/run.py` runs the experiment for one model.
+- `scripts/grade.py` is the AI grader.
+- `scripts/summarize.py` runs the cross-model comparisons.
+- `results/<model>/` holds every number and every answer each model gave.
+  `behavior_graded.jsonl` has the answers with the grader's labels.

@@ -1,0 +1,13 @@
+{
+  "model": "unsloth/Llama-3.2-3B-Instruct",
+  "layer": 12.0,
+  "pos": -4.0,
+  "n_layers": 28,
+  "kl_max": 0.5,
+  "baseline_harmful": 7.866247653961182,
+  "baseline_harmless": -8.635540008544922,
+  "ablate_harmful": -5.495976448059082,
+  "add_harmless": 6.140487194061279,
+  "kl_harmless": 0.01679890602827072,
+  "norm": 6.265215873718262
+}
