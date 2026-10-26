@@ -8,7 +8,7 @@ This is the plan document. It says what is done, what each of us does next, and 
 
 | Who | Next task | Needs a GPU? | By |
 |---|---|---|---|
-| **Divya** | Upload the `.pt` files and add the link; draft the left/right and projection-matching slides | No | Mon |
+| **Divya** | Draft the left/right and projection-matching slides (`.pt` files are uploaded, see [Where things are](#where-things-are)) | No | Mon |
 | **Michael** | Layer-wise curves: refusal curve and where the party / alignment gap appears ([details](#for-michael-layer-wise-curves-no-gpu-needed)) | No | Tue |
 | **Tyler** | A third model, e.g. Gemma-2-9B-it or a second Chinese-lab model, with `pod_run.sh` ([details](#for-tyler-more-models)) | Yes, about 1 hr on an A40 | **Mon** (away Tue/Wed) |
 | **Skyler** | Causal follow-ups: does projection predict refusal; addition by party ([details](#for-skyler-causal-tests)) | One no, one yes | Wed |
@@ -129,7 +129,13 @@ Per model, in `results/<model>/`:
 
 Elsewhere: `results/headline_behavior.csv` (all behavior comparisons), `validation/` (rubric, reviewed labels, agreement scripts), `pod_logs/` (run logs, not in git).
 
-**Large files are not in git** (`*.pt` is ignored). Download link: **TODO (Divya to add)**. Sizes: `political_acts.pt` about 185 MB (Qwen) and 240 MB (Llama); the others are a few MB.
+**Large files are not in git** (`*.pt` is ignored). They are on the release [tensors-v1](https://github.com/brow4623/ai-safety-democracy/releases/tag/tensors-v1), named `<model>.<file>.pt`, with checksums in `SHA256SUMS.txt`. Sizes: `political_acts.pt` 185 MB (Qwen) and 241 MB (Llama); the others are a few MB. To download and put them in place, from the repo root:
+
+```bash
+gh release download tensors-v1 --repo brow4623/ai-safety-democracy --dir /tmp/tensors && for f in /tmp/tensors/*.pt; do n=$(basename "$f"); mv "$f" "results/${n%.*.*}/${n#*-Instruct.}"; done
+```
+
+(Or download them from the release page and rename `Qwen2.5-7B-Instruct.direction.pt` to `results/Qwen2.5-7B-Instruct/direction.pt`, and so on.)
 
 Tensor formats (load with `torch.load`):
 - `direction.pt`: `direction` [d_model], `layer`, `pos` (index into the post-instruction tokens), `all_dirs` [n_layers, n_positions, d_model] (every candidate direction).
