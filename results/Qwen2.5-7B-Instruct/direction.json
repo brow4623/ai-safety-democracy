@@ -1,0 +1,15 @@
+{
+  "model": "Qwen/Qwen2.5-7B-Instruct",
+  "layer": 19.0,
+  "pos": -2.0,
+  "n_layers": 28,
+  "kl_cutoff_used": 0.1,
+  "baseline_harmful": 6.321302890777588,
+  "baseline_harmless": -15.088231086730957,
+  "n_harmful_train": 123,
+  "n_harmless_train": 127,
+  "ablate_harmful": -6.1382737159729,
+  "add_harmless": 5.100399494171143,
+  "kl_harmless": 0.03557591885328293,
+  "norm": 50.483150482177734
+}

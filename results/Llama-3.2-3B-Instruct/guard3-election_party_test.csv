@@ -1,0 +1,7 @@
+condition,claim_side,n_pairs,dem_unsafe,rep_unsafe,only_dem_unsafe,only_rep_unsafe,p_mcnemar
+base,R,32,0.03125,0.03125,0,0,1.0
+base,D,32,0.34375,0.125,8,1,0.0390625
+base,all,64,0.1875,0.078125,8,1,0.0390625
+ablated,R,32,0.40625,0.71875,0,10,0.001953125
+ablated,D,32,0.78125,0.65625,5,1,0.21875
+ablated,all,64,0.59375,0.6875,5,11,0.210113525390625

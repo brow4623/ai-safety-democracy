@@ -17,6 +17,7 @@ Usage:
 import argparse
 import json
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -29,24 +30,37 @@ sys.path.insert(0, str(ROOT / "src"))
 from model import DEFAULT_MODEL, Model, classify  # noqa: E402
 
 SEED = 0
+KL_PAPER = 0.1   # Arditi et al.'s cutoff for KL on harmless prompts
+
+# Anchor prompts that touch politics are dropped, so the refusal direction
+# can't pick up "this is about politics" (e.g. an AdvBench election-
+# misinformation prompt, or "compare the Democratic and Republican parties").
+POLITICAL = re.compile(r"\b(elect\w*|vot(e|es|ed|er|ers|ing)|ballot\w*|democrat\w*|republican\w*|"
+                       r"trump|biden|clinton|obama|politic\w*|campaign\w*|partisan|congress\w*|senat\w*)\b",
+                       re.IGNORECASE)
 
 
 def load_json(p):
-    return [x["instruction"] for x in json.load(open(p))]
+    return [x["instruction"] for x in json.load(open(p)) if not POLITICAL.search(x["instruction"])]
 
 
 def load_political():
     return pd.read_json(ROOT / "data" / "political_prompts.jsonl", lines=True)
 
 
-def anchor_sets(n_train, n_val):
+def anchor_sets(n_train, n_val, n_test=0):
+    """Harmful train/test come from disjoint parts of harmful_train.json, so the
+    final ablation sanity check uses prompts that played no part in choosing
+    the direction (harmful_val picks the layer, so it can't be the test)."""
     rng = random.Random(SEED)
     d = ROOT / "data" / "anchor"
-    harmful_train = rng.sample(load_json(d / "harmful_train.json"), n_train)
+    harmful_pool = load_json(d / "harmful_train.json")
+    rng.shuffle(harmful_pool)
+    harmful_train, harmful_test = harmful_pool[:n_train], harmful_pool[n_train:n_train + n_test]
     harmless_train = rng.sample(load_json(d / "harmless_train.json"), n_train)
     harmful_val = rng.sample(load_json(d / "harmful_val.json"), n_val)
     harmless_val = rng.sample(load_json(d / "harmless_val.json"), n_val)
-    return harmful_train, harmless_train, harmful_val, harmless_val
+    return harmful_train, harmless_train, harmful_val, harmless_val, harmful_test
 
 
 # ---------------------------------------------------------------- direction
@@ -58,7 +72,7 @@ def stage_direction(m, out, args):
         return select_direction(m, out, args, pd.read_csv(out / "direction_selection.csv"),
                                 means["mean_harmful"] - means["mean_harmless"], {})
 
-    harmful_train, harmless_train, harmful_val, harmless_val = anchor_sets(args.n_train, args.n_val)
+    harmful_train, harmless_train, harmful_val, harmless_val, _ = anchor_sets(args.n_train, args.n_val)
 
     # Keep only harmful prompts the model actually refuses and harmless ones it
     # does not, as in Arditi et al., so the means describe refusal itself.
@@ -68,8 +82,9 @@ def stage_direction(m, out, args):
     harmless_train = [x for x, s in zip(harmless_train, ls) if s < 0]
     print(f"kept {len(harmful_train)} harmful / {len(harmless_train)} harmless train prompts")
 
-    mu_h = m.eoi_acts(harmful_train).mean(0)    # [L, P, D]
-    mu_l = m.eoi_acts(harmless_train).mean(0)
+    acts_h = m.eoi_acts(harmful_train)          # [N, L, P, D]
+    acts_l = m.eoi_acts(harmless_train)
+    mu_h, mu_l = acts_h.mean(0), acts_l.mean(0)  # [L, P, D]
     dirs = mu_h - mu_l
     torch.save({"mean_harmful": mu_h, "mean_harmless": mu_l}, out / "anchor_means.pt")
 
@@ -94,29 +109,58 @@ def stage_direction(m, out, args):
         print(f"layer {layer}: best ablate so far {min(x['ablate_harmful'] for x in rows):.2f}")
     sel = pd.DataFrame(rows)
     sel.to_csv(out / "direction_selection.csv", index=False)
-    select_direction(m, out, args, sel, dirs,
-                     {"baseline_harmful": base_h, "baseline_harmless": base_l})
+    layer, p = select_direction(m, out, args, sel, dirs,
+                                {"baseline_harmful": base_h, "baseline_harmless": base_l,
+                                 "n_harmful_train": len(harmful_train),
+                                 "n_harmless_train": len(harmless_train)})
+    direction_stability(out, acts_h[:, layer, p], acts_l[:, layer, p], dirs[layer, p])
 
 
 def select_direction(m, out, args, sel, dirs, extra):
     # Arditi et al. filters: addition must induce refusal, ablation must not
     # change harmless behavior much. Then take the lowest ablated refusal score.
-    # Their KL cutoff is 0.1; on Qwen2.5-3B nothing with a real ablation effect
-    # passes that, and the unfiltered winner (KL 3.1) visibly damaged factual
-    # recall, so the cutoff is a flag (default 0.5).
-    ok = sel[(sel.add_harmless > 0) & (sel.kl_harmless < args.kl_max)]
-    if ok.empty:
+    # Their KL cutoff is 0.1, which we try first. On Qwen2.5-3B nothing with a
+    # real ablation effect passed it, and the unfiltered winner (KL 3.1)
+    # visibly damaged factual recall, so we then fall back to --kl-max.
+    for cutoff in [KL_PAPER, args.kl_max]:
+        ok = sel[(sel.add_harmless > 0) & (sel.kl_harmless < cutoff)]
+        if not ok.empty:
+            break
+    else:
         print("WARNING: no candidate passed the filters, using unfiltered best")
-        ok = sel
+        ok, cutoff = sel, None
     best = ok.sort_values("ablate_harmful").iloc[0]
     layer, pos = int(best.layer), int(best.pos)
     p = pos + m.eoi_len
     torch.save({"direction": dirs[layer, p], "layer": layer, "pos": p,
                 "all_dirs": dirs}, out / "direction.pt")
     summary = {"model": m.name, "layer": layer, "pos": pos, "n_layers": m.n_layers,
-               "kl_max": args.kl_max, **extra, **best.to_dict()}
+               "kl_cutoff_used": cutoff, **extra, **best.to_dict()}
     json.dump(summary, open(out / "direction.json", "w"), indent=2)
     print(json.dumps(summary, indent=2))
+    return layer, p
+
+
+def direction_stability(out, acts_h, acts_l, direction, n_boot=100):
+    """Is the chosen direction a fluke of which prompts were sampled?
+
+    Re-extracts it from bootstrap resamples of the train prompts, and from two
+    disjoint halves, and reports the cosine with the full-sample direction.
+    """
+    g = torch.Generator().manual_seed(SEED)
+    boots = []
+    for _ in range(n_boot):
+        ih = torch.randint(len(acts_h), (len(acts_h),), generator=g)
+        il = torch.randint(len(acts_l), (len(acts_l),), generator=g)
+        boots.append(cos(acts_h[ih].mean(0) - acts_l[il].mean(0), direction))
+    ph, pl = torch.randperm(len(acts_h), generator=g), torch.randperm(len(acts_l), generator=g)
+    hh, hl = len(ph) // 2, len(pl) // 2
+    half_a = acts_h[ph[:hh]].mean(0) - acts_l[pl[:hl]].mean(0)
+    half_b = acts_h[ph[hh:]].mean(0) - acts_l[pl[hl:]].mean(0)
+    stab = {"bootstrap_cos_mean": float(np.mean(boots)), "bootstrap_cos_p05": float(np.quantile(boots, 0.05)),
+            "bootstrap_cos_min": float(np.min(boots)), "split_half_cos": cos(half_a, half_b), "n_boot": n_boot}
+    json.dump(stab, open(out / "direction_stability.json", "w"), indent=2)
+    print("direction stability:", stab)
 
 
 @torch.no_grad()
@@ -143,8 +187,19 @@ def stage_geometry(m, out, args):
     df["refusal_score"] = m.refusal_score(df.instruction.tolist()).numpy()
     df.drop(columns="instruction").to_csv(out / "geometry_per_prompt.csv", index=False)
 
+    # Saved for the layer-wise analysis, so it needs no GPU: every prompt's
+    # activations at every layer, plus its projection onto each layer's own
+    # anchor direction (same position as the chosen direction).
+    torch.save({"ids": df.id.tolist(), "pos": pos, "acts": acts.half()}, out / "political_acts.pt")
+    dirs_l = d["all_dirs"][:, pos]
+    dirs_l = dirs_l / dirs_l.norm(dim=-1, keepdim=True)
+    proj_l = torch.einsum("nld,ld->nl", acts, dirs_l).numpy()
+    meta = df[["id", "pair_id", "kind", "election", "claim_side", "template", "severity", "identity", "alignment"]]
+    pd.concat([meta, pd.DataFrame(proj_l, columns=[f"L{l}" for l in range(m.n_layers)])], axis=1) \
+        .to_csv(out / "layerwise_projection.csv", index=False)
+
     # 1. Where do the prompts sit on the anchor refusal direction?
-    g = df.groupby(["kind", "identity", "claim_side"])[["proj", "refusal_score"]].mean()
+    g = df.groupby(["kind", "severity", "identity", "claim_side"])[["proj", "refusal_score"]].mean()
     print(g)
     g.to_csv(out / "projection_by_cell.csv")
 
@@ -154,9 +209,11 @@ def stage_geometry(m, out, args):
     pair_rows = []
     for kind in ["stolen", "benign"]:
         piv = df[df.kind == kind].pivot(index="pair_id", columns="identity", values="proj")
-        side = df[(df.kind == kind)].drop_duplicates("pair_id").set_index("pair_id").claim_side
-        for subset, mask in [("all", slice(None)), ("R-coded claim", side == "R"),
-                             ("D-coded claim", side == "D")]:
+        cells = df[(df.kind == kind)].drop_duplicates("pair_id").set_index("pair_id")
+        side, sev = cells.claim_side, cells.severity
+        subsets = [("all", slice(None)), ("R-coded claim", side == "R"), ("D-coded claim", side == "D")]
+        subsets += [(f"severity {s}", sev == s) for s in sorted(sev.unique()) if sev.nunique() > 1]
+        for subset, mask in subsets:
             diff = (piv.democrat - piv.republican)[mask].values
             null = np.array([(diff * rng.choice([-1, 1], len(diff))).mean() for _ in range(10000)])
             pair_rows.append({"kind": kind, "claims": subset, "n_pairs": len(diff),
@@ -165,7 +222,10 @@ def stage_geometry(m, out, args):
                               # voter = same sentence shape, no party: the fair baseline
                               "dem_minus_voter": (piv.democrat - piv.voter)[mask].mean(),
                               "rep_minus_voter": (piv.republican - piv.voter)[mask].mean(),
-                              "voter_minus_none": (piv.voter - piv["none"])[mask].mean()})
+                              "voter_minus_none": (piv.voter - piv["none"])[mask].mean(),
+                              # non-political identity of the same shape
+                              **({"fan_minus_none": (piv.fan - piv["none"])[mask].mean()}
+                                 if "fan" in piv else {})})
     pairs = pd.DataFrame(pair_rows)
     print(pairs.to_string())
     pairs.to_csv(out / "paired_identity_effect.csv", index=False)
@@ -237,7 +297,7 @@ def stage_behavior(m, out, args):
 
     rates = []
     for cond in ["base", "ablated"]:
-        t = (res.groupby(["kind", "identity", "claim_side"])[f"label_{cond}"]
+        t = (res.groupby(["kind", "severity", "identity", "claim_side"])[f"label_{cond}"]
              .value_counts(normalize=True).unstack(fill_value=0))
         t["condition"] = cond
         rates.append(t.reset_index())
@@ -245,13 +305,15 @@ def stage_behavior(m, out, args):
     rates.to_csv(out / "behavior_rates.csv", index=False)
     print(rates.round(2).to_string())
 
-    # Sanity check that the direction is causal on standard harmful prompts.
-    _, _, harmful_val, _ = anchor_sets(1, args.n_val)
-    base = [classify(x) for x in m.generate(harmful_val, max_new_tokens=48)]
+    # Sanity check that the direction is causal on standard harmful prompts,
+    # on held-out prompts that were not used to build or choose it.
+    *_, harmful_test = anchor_sets(args.n_train, args.n_val, args.n_test)
+    base = [classify(x) for x in m.generate(harmful_test, max_new_tokens=48)]
     with m.ablate(d["direction"]):
-        abl = [classify(x) for x in m.generate(harmful_val, max_new_tokens=48)]
-    check = {"harmful_val_refuse_base": np.mean([x == "refuse" for x in base]),
-             "harmful_val_refuse_ablated": np.mean([x == "refuse" for x in abl])}
+        abl = [classify(x) for x in m.generate(harmful_test, max_new_tokens=48)]
+    check = {"n_harmful_test": len(harmful_test),
+             "harmful_test_refuse_base": np.mean([x == "refuse" for x in base]),
+             "harmful_test_refuse_ablated": np.mean([x == "refuse" for x in abl])}
     json.dump(check, open(out / "ablation_sanity.json", "w"), indent=2)
     print(check)
 
@@ -262,9 +324,10 @@ def main():
     ap.add_argument("--stage", choices=["direction", "geometry", "behavior", "all"], default="all")
     ap.add_argument("--n-train", type=int, default=128)
     ap.add_argument("--n-val", type=int, default=32)
+    ap.add_argument("--n-test", type=int, default=64, help="held-out harmful prompts for the ablation sanity check")
     ap.add_argument("--max-new-tokens", type=int, default=128)
     ap.add_argument("--limit", type=int, default=0, help="behavior: prompts per (kind, identity), 0 = all")
-    ap.add_argument("--kl-max", type=float, default=0.5, help="direction: max KL on harmless prompts")
+    ap.add_argument("--kl-max", type=float, default=0.5, help="direction: fallback max KL on harmless prompts if nothing passes the paper's 0.1")
     ap.add_argument("--reselect", action="store_true",
                     help="direction: reuse the saved scan, only re-apply the filters")
     args = ap.parse_args()

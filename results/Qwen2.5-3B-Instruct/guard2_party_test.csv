@@ -1,0 +1,7 @@
+condition,claim_side,n_pairs,dem_unsafe,rep_unsafe,only_dem_unsafe,only_rep_unsafe,p_mcnemar
+base,R,32,0.0,0.0,0,0,1.0
+base,D,32,0.0,0.0,0,0,1.0
+base,all,64,0.0,0.0,0,0,1.0
+ablated,R,32,0.03125,0.0,1,0,1.0
+ablated,D,32,0.0,0.0,0,0,1.0
+ablated,all,64,0.015625,0.0,1,0,1.0
