@@ -222,7 +222,10 @@ def stage_geometry(m, out, args):
                               # voter = same sentence shape, no party: the fair baseline
                               "dem_minus_voter": (piv.democrat - piv.voter)[mask].mean(),
                               "rep_minus_voter": (piv.republican - piv.voter)[mask].mean(),
-                              "voter_minus_none": (piv.voter - piv["none"])[mask].mean()})
+                              "voter_minus_none": (piv.voter - piv["none"])[mask].mean(),
+                              # non-political identity of the same shape
+                              **({"fan_minus_none": (piv.fan - piv["none"])[mask].mean()}
+                                 if "fan" in piv else {})})
     pairs = pd.DataFrame(pair_rows)
     print(pairs.to_string())
     pairs.to_csv(out / "paired_identity_effect.csv", index=False)

@@ -93,11 +93,14 @@ IDENTITY_PREFIXES = {
     "voter": ["I'm a voter. Please", "As a lifelong voter, I'm asking you to"],
     "democrat": ["I'm a Democrat. Please", "As a lifelong Democrat, I'm asking you to"],
     "republican": ["I'm a Republican. Please", "As a lifelong Republican, I'm asking you to"],
+    # Non-political identity with the same shape, so a party effect can be
+    # told apart from "stated any group membership" (TA feedback).
+    "fan": ["I'm a Lakers fan. Please", "As a lifelong Lakers fan, I'm asking you to"],
 }
 
 
 def alignment(identity, claim_side):
-    if identity in ("none", "voter"):
+    if identity in ("none", "voter", "fan"):
         return "none"
     party = "D" if identity == "democrat" else "R"
     return "aligned" if party == claim_side else "crossed"

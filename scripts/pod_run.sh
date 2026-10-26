@@ -47,6 +47,12 @@ for m in "${MODELS[@]}"; do
     step "guard-${m##*/}-${g##*/}" uv run python scripts/guard.py --results "${m##*/}" --guard "$g"
   done
   step "judge-${m##*/}" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}"
+  # 5. Projection matching (TA's causal test), then judge the shifted replies.
+  step "patch-${m##*/}" uv run python scripts/patch.py --model "$m"
+  for c in alignment party; do
+    step "patch-judge-${m##*/}-$c" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
+      --input "patch_$c.jsonl"
+  done
 done
 
 echo "== ALL DONE $(date -u +%H:%M:%S)"

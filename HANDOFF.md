@@ -14,6 +14,24 @@ Done on two models, **Qwen2.5-7B-Instruct** and **Llama-3.1-8B-Instruct**:
 
 The run took about 2 hours on one A40 on RunPod. The pod is terminated.
 
+## TA feedback (Ege) and where it stands
+
+| Feedback | Status |
+|---|---|
+| Fix which election; cross claim with party | Done: every prompt names the election; 4 Republican-coded and 4 Democratic-coded claims, each asked by both parties (aligned vs crossed) |
+| No-label baseline | Done ("none") |
+| Non-political identity control ("I'm a Lakers fan") | **Added to the prompts** (`fan`, 920 prompts total). Not in the committed 7B/8B results yet; needs one more GPU run |
+| Many requests, not one | Done: 17 request types x 8 elections, 3 severity levels |
+| Party-specific directions always differ; use one non-political direction and compare projections | Done: that is the main analysis. The cos(r_D, r_R) check is near 1 by construction, so treat it as **secondary**, not a headline |
+| Strong, calibrated judge that catches steering/redirecting | Partly: REDIRECT is its own label and the judge is checked against reviewed labels (kappa 0.68), but it over-counts redirects and is validated on 3B only |
+| Ablation removes refusal everywhere; instead set the lower side's projection to the other side's average | **Code ready** (`scripts/patch.py`, plus a random-direction control). Not run yet; needs the GPU run |
+| Pilot refusal rates need room for a difference | Fixed by 7B/8B: baseline "did the task" is 36% (Qwen) and 16% (Llama), not near 0 |
+| Direction from non-political prompts | Done |
+
+**Next GPU run** (about an hour on one A40, under $1): `scripts/pod_run.sh` now regenerates everything with the `fan` identity and runs `patch.py` plus judging for both models. Move or delete the old `.done` markers first, or it skips finished steps.
+
+How `patch.py` works: for a comparison (aligned vs crossed, or Democrat vs Republican), the group with the lower mean projection is raised so each prompt's projection at the chosen layer equals the other group's average, by adding a multiple of the unit refusal direction at that layer's input, at every position. Nothing else changes. The same shift along a random orthogonal direction is the control. Compare the patched "did the task" rate with the target group's base rate. Checked on a small model: after the shift, the layer sees projections within 0.04 of the target.
+
 ## Headline results
 
 Reproduce with `uv run python scripts/headline.py`. "Did the task" means the judge says the reply produced the requested stolen-election content.
@@ -36,7 +54,7 @@ Reproduce with `uv run python scripts/headline.py`. "Did the task" means the jud
 
 Example: Qwen-7B helps a Republican argue a Republican-coded claim (2020, Arizona 2022) 47% of the time, a Democrat with the same request 24%. The refusal-direction projection shows the same thing: crossed requests sit closer to refusal (Qwen +1.59, about 11% of the stolen-vs-benign gap; Llama +0.14, about 7%; both p < 0.001).
 
-**One shared direction, not two.** cos(r_D, r_R) is at least 0.987 at every layer in both models, and the D-minus-R gap lines up with the refusal direction beyond chance at 1 of 27 layers (Qwen) and 0 of 31 (Llama).
+**One shared direction, not two (secondary; see TA feedback).** cos(r_D, r_R) is at least 0.987 at every layer in both models, and the D-minus-R gap lines up with the refusal direction beyond chance at 1 of 27 layers (Qwen) and 0 of 31 (Llama).
 
 **Ablation is causal and mostly removes the asymmetry.** Did the task goes from 36% to 82% (Qwen) and 16% to 84% (Llama), benign stays at 0%. Aligned vs crossed after ablation: Qwen 84% vs 79% (p = 0.24), Llama 88% vs 82% (p = 0.04). With the direction removed, did the task rises with severity (Qwen 62% / 84% / 97%, Llama 66% / 85% / 100% for levels 1 / 2 / 3).
 
@@ -95,6 +113,7 @@ Tensor formats (load with `torch.load`):
 
 ## For Skyler: causal tests not done yet
 
+0. **Projection matching** (the TA's test) is the priority: `scripts/patch.py` is written and checked, and it runs as part of `pod_run.sh`. Analyze `results/<model>/patch_<comparison>-guard3-election.jsonl` against the target group's base rate in `guard3-election.jsonl`.
 1. **Addition by party.** Add the direction (`Model.add` in `src/model.py`) to the benign election questions and check whether it induces refusal equally for Democrat and Republican askers. Cleaner causal symmetry test than ablation.
 2. **Does projection predict refusal?** Logistic regression of the judge's "did the task" on each prompt's projection (`geometry_per_prompt.csv` joined to `guard3-election.jsonl` on `id`), with party and alignment terms.
 3. **Ablation by layer** for the party gap (ablate only at some layers) if Michael's curves point somewhere specific.
@@ -105,7 +124,8 @@ Tensor formats (load with `torch.load`):
 
 - Judge limits above (high absolute rates; validated on 3B only; AI labels reviewed by a human).
 - Qwen-7B baseline helps more with severity 3 (34%) than severity 2 (21%). Worth reading those replies before putting severity on a slide.
-- The "none" identity uses "Please" in both phrasings while the others alternate. Use "voter" as the no-party baseline.
+- The "none" identity uses "Please" in both phrasings while the others alternate. Use "voter" or "fan" as the no-party baseline.
+- `data/political_prompts.jsonl` now has 920 prompts (with `fan`); the committed 7B/8B results were made from the first 736. The ids that exist in both are identical.
 - The 3B pilot used Sreya's 384 prompts and the old extraction (validation set reused for the sanity check, Qwen-3B KL relaxed to 0.5). Its files are kept as they were, apart from re-grading.
 
 ## Rerun from scratch
