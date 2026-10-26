@@ -8,7 +8,7 @@ This is the plan document. It says what is done, what each of us does next, and 
 
 | Who | Next task | Needs a GPU? | By |
 |---|---|---|---|
-| **Divya** | Finish the projection-matching controls (running now) and add them below; upload the `.pt` files and add the link | Running now | Mon |
+| **Divya** | Upload the `.pt` files and add the link; draft the left/right and projection-matching slides | No | Mon |
 | **Michael** | Layer-wise curves: refusal curve and where the party / alignment gap appears ([details](#for-michael-layer-wise-curves-no-gpu-needed)) | No | Tue |
 | **Tyler** | A third model, e.g. Gemma-2-9B-it or a second Chinese-lab model, with `pod_run.sh` ([details](#for-tyler-more-models)) | Yes, about 1 hr on an A40 | **Mon** (away Tue/Wed) |
 | **Skyler** | Causal follow-ups: does projection predict refusal; addition by party ([details](#for-skyler-causal-tests)) | One no, one yes | Wed |
@@ -24,7 +24,7 @@ Done on **Qwen2.5-7B-Instruct** and **Llama-3.1-8B-Instruct** (two runs on one A
 - Refusal direction from non-political harmful vs harmless prompts, checked on held-out prompts and for stability.
 - Projection of every prompt onto that direction, at every layer.
 - Replies with and without the direction ablated, scored by a validated judge.
-- Projection matching (the TA's causal test), first version. Controls are running now.
+- Projection matching (the TA's causal test), with controls for how the shift is applied and a dose check.
 - The 3B pilot (Sreya's Qwen2.5-3B and Llama-3.2-3B) is kept for comparison.
 
 ## TA feedback (Ege) and where it stands
@@ -37,7 +37,7 @@ Done on **Qwen2.5-7B-Instruct** and **Llama-3.1-8B-Instruct** (two runs on one A
 | Many requests, not one | Done: 17 request types x 8 elections, 3 severity levels |
 | Party-specific directions always differ; use one non-political direction and compare projections | Done: that is the main analysis. The cos(r_D, r_R) check is near 1 by construction, so it is **secondary** |
 | Strong, calibrated judge that catches steering/redirecting | Partly: REDIRECT is its own label and the judge is checked against reviewed labels (kappa 0.68), but it over-counts redirects and is validated on 3B replies only |
-| Ablation removes refusal everywhere; instead set the lower side's projection to the other side's average | First version done; **controls running** (see below) |
+| Ablation removes refusal everywhere; instead set the lower side's projection to the other side's average | Done, with controls (see Projection matching below) |
 | Pilot refusal rates need room for a difference | Fixed by 7B/8B: baseline "did the task" is 36% (Qwen) and 15% (Llama) |
 | Direction from non-political prompts | Done |
 
@@ -77,14 +77,23 @@ A Lakers fan is treated about like a partisan. What moves the models is whether 
 
 **Ablation is causal and removes the asymmetry.** Did the task goes from 36% to 81% (Qwen) and 15% to 82% (Llama); benign stays at 0%. Aligned vs crossed after ablation: Qwen 85% vs 82% (p = 0.45), Llama 86% vs 82% (p = 0.23). With the direction removed, did the task rises with severity (Qwen 62% / 83% / 96%, Llama 64% / 83% / 99% for levels 1 / 2 / 3).
 
-**Projection matching (TA's test): not conclusive yet.** Raising aligned prompts so each one's projection equals the crossed average:
+**Projection matching (TA's test).** Aligned prompts (the side the model helps more) are pushed along the refusal direction toward the crossed prompts' level, at the chosen layer, nothing else changed. Did the task, aligned prompts (136):
 
-| | Aligned before | Crossed before | Aligned after matching | Random-direction control |
-|---|---|---|---|---|
-| Qwen2.5-7B | 40% | 26% | 42% (no change, p = 0.75) | 41% |
-| Llama-3.1-8B | 18% | 10% | 6% (p = 0.002) | 16% |
+| Intervention | Qwen2.5-7B | Llama-3.1-8B |
+|---|---|---|
+| Before (aligned / crossed) | 40% / 26% | 18% / 10% |
+| Each prompt set to the crossed average | 42% (p = 0.75) | 6% (p = 0.002) |
+| Each prompt set to its **own** group average (control: no gap change) | 46% (p = 0.24) | 10% (p = 0.04) |
+| **Constant shift by the gap (1x), the clean test** | **39% (p = 1.0)** | **13% (p = 0.09)** |
+| Constant shift 3x | 31% (p = 0.02) | 10% (p = 0.008) |
+| Constant shift 10x | 15% (p < 0.001) | 0% (p < 0.001) |
+| Same 10x shift along a random direction | 41% | 14% |
 
-Qwen says the gap doesn't run through the direction; Llama overshoots (6%, below the crossed 10%), and Democrat -> Republican matching overshoots the same way. The likely reason is the method: setting every prompt to one value also removes the spread across prompts. Three controls are running now: set each group to its **own** average (no gap change), a **constant** shift by the gap (keeps the spread), and a **dose** check (1x, 3x, 10x). Results will be added here. **Don't put a projection-matching conclusion on a slide until then.**
+How to read it:
+- **"Set to the average" is confounded.** Setting each prompt to its own group's average, which leaves the gap untouched, moves Llama about as much as setting it to the crossed average. So that version mostly measures removing the spread across prompts, not the gap. Use the constant shift instead.
+- **The direction really controls this behavior.** Bigger shifts along it lower "did the task" step by step in both models, and the same shift along a random direction does nothing.
+- **How much of the aligned/crossed gap runs through it differs by model.** Shifting by exactly the measured gap (1x) closes about 64% of Llama's gap (18% -> 13%, short of significance with 136 prompts) and about 5% of Qwen's (40% -> 39%). In Qwen the gap mostly comes from somewhere else; in Llama the direction plausibly explains much of it.
+- Democrat vs Republican: there's no behavior gap to explain (32% vs 33% in Qwen), and the 1x shift changes nothing in either model.
 
 **One shared direction, not two (secondary; see TA feedback).** cos(r_D, r_R) is at least 0.987 at every layer in both models, and the D-minus-R gap lines up with the refusal direction beyond chance at 2 of 27 layers (Qwen) and 0 of 31 (Llama).
 
@@ -146,7 +155,7 @@ Tensor formats (load with `torch.load`):
 
 1. **Does projection predict refusal?** (no GPU) Logistic regression of the judge's "did the task" on each prompt's projection (`geometry_per_prompt.csv` joined to `guard3-election.jsonl` on `id`), with party, alignment and severity terms.
 2. **Addition by party.** (GPU) Add the direction (`Model.add` in `src/model.py`) to the benign election questions and check whether it induces refusal equally for Democrat and Republican askers.
-3. **Projection matching:** Divya's controls are running; once they're in, interpret them together (see Headline results).
+3. **Projection matching follow-up:** the 1x shift in Llama closes ~64% of the gap but isn't significant at 136 prompts; more prompts or a 2x shift would settle it.
 4. **Ablation by layer** for the alignment gap, if Michael's curves point somewhere specific.
 
 ## Known issues
