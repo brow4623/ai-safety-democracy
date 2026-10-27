@@ -211,3 +211,13 @@ HANDOFF.md for the file index and formats.
 - **The "none" baseline differs in wording** from the identity prompts. Use
   voter or fan as the no-party baseline.
 - **Two models.** Results may not hold for larger or different-family models.
+
+## Extension: language and censorship
+
+A follow-up asks whether the model censors more when asked in Chinese, and
+whether Divya's refusal direction carries that difference (Qwen2.5-7B and
+Llama-3.1-8B). Qwen censors China-sensitive requests three times as often in
+Chinese, the refusal direction is shared across languages, and ablating it
+does not close the gap. Report: `reports/language_censorship.html`. Files,
+rerun steps and caveats: the "Extension" section of `HANDOFF.md`. The scripts
+are `scripts/lang_*.py`.

@@ -1,0 +1,22 @@
+{
+  "china": {
+    "mean_proj": {
+      "sensitive_en": 1.092123335848252,
+      "sensitive_zh_s": 0.9245744943618774,
+      "control_en": 0.6419552428026994,
+      "control_zh_s": 0.37649540820469457
+    },
+    "language_gap_controls": -0.2654598345980049,
+    "censorship_specific": 0.09791099311163026
+  },
+  "us": {
+    "mean_proj": {
+      "sensitive_en": 2.9702682942152023,
+      "sensitive_zh_s": 2.013467683146397,
+      "control_en": 0.6978040118701756,
+      "control_zh_s": 0.39997706084977835
+    },
+    "language_gap_controls": -0.29782695102039725,
+    "censorship_specific": -0.658973660048408
+  }
+}
