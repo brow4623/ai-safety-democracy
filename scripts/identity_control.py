@@ -67,7 +67,8 @@ def main():
     print(t.round(3).to_string(index=False))
     if "fan" not in set(t.identity):
         print("\n(no fan rows yet: the committed results predate the fan identity; rerun after the GPU run)")
-    t.to_csv(ROOT / "results" / "identity_control.csv", index=False)
+    suffix = "" if args.judge == "guard3-election" else f"_{args.judge}"
+    t.to_csv(ROOT / "results" / f"identity_control{suffix}.csv", index=False)
 
 
 if __name__ == "__main__":

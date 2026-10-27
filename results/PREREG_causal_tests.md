@@ -96,3 +96,26 @@ induced rise in the logit refusal score is compared across identities.
   headline causal finding.
 - D1 fails: the aligned-vs-crossed finding is judge-dependent and goes on
   the slide with that caveat, whichever judge a reader prefers.
+
+---
+
+## Amendment, 2026-10-27 (still before the GPU run)
+
+The second judge (D) was run first because it needed no GPU. All four D
+predictions held (`NO_GPU_FOLLOWUPS.md` section 4). But the regression
+under the Claude judge, which the direction predicts better (AUC 0.89 vs
+0.81), shows partial mediation of the crossed effect by projection: the
+crossed coefficient shrinks 19% (Qwen) and 40% (Llama) when projection is
+added. The Guard-judge regression that prediction A1 was built on showed
+0%.
+
+Amended A1 expectation: projection matching closes **about 20% (Qwen) to
+40% (Llama)** of the aligned-minus-crossed gap when judged with Claude, and
+less under Guard. Pass bars are unchanged: **50% or more** closed with the
+random control under 25% means the gap runs through the direction; **under
+25%** means it does not; between is partial mediation, reported as such.
+Both judges will be run on the patched replies (`guard.py --input` and
+`judge_claude.py --input patch_alignment.jsonl`) and both reported.
+
+A2, B and C are unchanged. B's symmetry prediction is, if anything,
+strengthened: the party gap itself is gone under the Claude judge.

@@ -115,16 +115,17 @@ Tensor formats (load with `torch.load`):
 
 0. **Projection matching** (the TA's test) is the priority: `scripts/patch.py` is written and checked, and it runs as part of `pod_run.sh`. Analyze `results/<model>/patch_<comparison>-guard3-election.jsonl` against the target group's base rate in `guard3-election.jsonl`. **Predictions and pass bars are pre-registered in `results/PREREG_causal_tests.md` (Oct 27); read it before looking at the result.**
 1. **Addition by party.** Code ready: `scripts/add_party.py` (runs in `pod_run.sh` after projection matching; judge its replies with `guard.py --input add_party.jsonl`). Prediction in `results/PREREG_causal_tests.md`.
-2. **Does projection predict refusal?** Logistic regression of the judge's "did the task" on each prompt's projection (`geometry_per_prompt.csv` joined to `guard3-election.jsonl` on `id`), with party and alignment terms.
+2. **Does projection predict refusal?** Done (Oct 26): `scripts/regress.py`, write-up in `results/NO_GPU_FOLLOWUPS.md`. Projection predicts "did the task" (AUC 0.8) but adding it does not shrink the crossed-vs-aligned coefficient, so expect projection matching *not* to close the gap under the Guard judge; under the Claude judge the regression shows partial mediation (see `results/PREREG_causal_tests.md` amendment).
 3. **Ablation by layer** for the party gap (ablate only at some layers) if Michael's curves point somewhere specific.
-4. **Second judge.** `scripts/judge_claude.py` re-scores the English replies with the language extension's Claude judge (needs `ANTHROPIC_API_KEY`, ~$9.50 for both models); `headline.py --judge claude-judge` then reruns every comparison under it.
+4. **Second judge.** Done (Oct 27, $15.70): `scripts/judge_claude.py` re-scored every reply with the language extension's Claude judge; `headline.py --judge claude-judge` reruns every comparison under it. The alignment effect holds under both judges; Qwen's party gap does not. `results/NO_GPU_FOLLOWUPS.md` section 4.
 
 1 and 3 need a GPU; 2 doesn't.
 
 ## Known issues
 
 - Judge limits above (high absolute rates; validated on 3B only; AI labels reviewed by a human).
-- Qwen-7B baseline helps more with severity 3 (34%) than severity 2 (21%). Worth reading those replies before putting severity on a slide.
+- Qwen-7B baseline helps more with severity 3 (34%) than severity 2 (21%). Read (Oct 26): it is a request-format effect (letters and speeches get drafted, "evidence"/"persuasive post" requests get refused), not severity. See `results/NO_GPU_FOLLOWUPS.md`. Don't present baseline severity as a curve.
+- The judge misses most severity-1 content (town-hall questions, scrutiny op-eds), and replies often echo the asker's party, so it is not fully blind. 7B/8B spot check in `results/NO_GPU_FOLLOWUPS.md` (Claude-labeled, needs a human pass over `validation/to_label_7b8b/Claude.csv`).
 - The "none" identity uses "Please" in both phrasings while the others alternate. Use "voter" or "fan" as the no-party baseline.
 - `data/political_prompts.jsonl` now has 920 prompts (with `fan`); the committed 7B/8B results were made from the first 736. The ids that exist in both are identical.
 - The 3B pilot used Sreya's 384 prompts and the old extraction (validation set reused for the sanity check, Qwen-3B KL relaxed to 0.5). Its files are kept as they were, apart from re-grading.

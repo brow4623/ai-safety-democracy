@@ -16,8 +16,9 @@ Output matches the guard schema so headline.py can read it with
   results/<model>/<input>-claude-judge.jsonl   for patch_*.jsonl / add_party.jsonl
 Calls are cached per (id, condition) in results/<model>/claude-judge_cache.jsonl,
 so a rerun only fills gaps. Cost is logged to the language extension's ledger
-under "judge_en"; about $0.0065 per reply, so ~$9.50 for both models' base and
-ablated replies. A 10% Sonnet re-check reports judge consistency.
+under "judge_en"; about $0.005 per reply, so ~$15 for both models' base and
+ablated replies (2,944 calls) plus ~$0.80 for the 10% Sonnet re-check, which
+reports judge consistency. Measured Oct 27: $15.70 total.
 
 Usage:
   ANTHROPIC_API_KEY=... uv run --with anthropic python scripts/judge_claude.py Qwen2.5-7B-Instruct Llama-3.1-8B-Instruct
