@@ -58,6 +58,11 @@ for m in "${MODELS[@]}"; do
   step "add-party-${m##*/}" uv run python scripts/add_party.py --model "$m"
   step "add-party-judge-${m##*/}" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
     --input "add_party.jsonl"
+  # 7. Alignment direction (what "crossed" adds beyond the party label) and
+  # its causal test, then judge those replies.
+  step "align-dir-${m##*/}" uv run python scripts/alignment_dir.py --model "$m"
+  step "align-dir-judge-${m##*/}" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
+    --input "alignment_dir.jsonl"
 done
 
 echo "== ALL DONE $(date -u +%H:%M:%S)"
