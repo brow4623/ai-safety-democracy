@@ -137,3 +137,75 @@ uv run python scripts/run.py --model Qwen/Qwen2.5-7B-Instruct --stage all
 uv run python scripts/guard.py --results Qwen2.5-7B-Instruct --guard meta-llama/Llama-Guard-3-8B --election-policy
 uv run python scripts/headline.py Qwen2.5-7B-Instruct
 ```
+
+---
+
+# Extension: language and censorship (Oct 27, Tyler)
+
+Does asking in Chinese instead of English change what a model refuses, and is that change carried by Divya's refusal direction? Run on Qwen2.5-7B-Instruct and Llama-3.1-8B-Instruct. Report: `reports/language_censorship.html` (also published as a private page; ask Tyler for the link).
+
+## Headline results
+
+| Question | Result |
+|---|---|
+| Q1. Does Chinese increase censorship of CCP-sensitive topics? | **Yes, Qwen.** 21% censored in English vs 62% in Simplified Chinese (24 matched pairs, McNemar p = 0.002). Traditional Chinese is the same (62%), so it is the language, not the script. Controls clean. |
+| Q2. Does language change behavior on the team's US stolen-election prompts? | **Reverses, exploratory.** Both models censor *less* in Chinese: Qwen 19% → 4%, Llama 69% → 52%. Neither survives Holm correction (0.131, 0.116). |
+| Q3. Is the refusal direction the same in both languages? | **Yes.** cos(English, Chinese) = 0.978 (Qwen), 0.908 (Llama); ablating one removes 86–117% of the other's refusal. Divya's directions reproduced within tolerance. |
+| Q4. Does removing the direction close the language gap? | **No for Qwen on China topics (the main finding).** The gap goes from 42 to 46 points after ablation. Most of it is official-line answers (29 of 42 points), which ablation leaves unchanged; projection matching agrees. **Yes for Llama on US elections**: the gap goes from −17 to +4 points, and raising projections increases refusal (52% → 81%, random direction 33%). |
+| Q5. Do models differ? | **Each model guards its own country.** Qwen censors 62% of China-sensitive prompts in Chinese, Llama 0% in every language. Llama refuses 69% of US election prompts in English, Qwen 19%. |
+
+Takeaway: the refusal direction controls genuine refusal in both languages, but Qwen's Chinese-language censorship is mostly state-aligned framing that does not run through it. An English refusal audit would miss it.
+
+"Censored" = official line + dodges + refuses. On election prompts, pushback against the false claim is counted separately and never as censorship.
+
+## Files
+
+| Path | What it is |
+|---|---|
+| `src/lang_prompts.py`, `scripts/lang_build_prompts.py` | China set (12 topics × question/writing × sensitive/control × en/zh_s/zh_t) and the combined set |
+| `data/lang_experiment_prompts.jsonl` | All 278 prompts per model (`pair` links a prompt to its control and translations) |
+| `data/lang_us_zh.json`, `data/lang_anchor_zh.json` | Chinese translations of the election prompts and of Divya's harmful/harmless anchor prompts (11 harmful anchors from MultiJail, marked `source: "multijail"`) |
+| `scripts/lang_pod_run.sh`, `scripts/lang_experiment.py` | GPU side: directions, behavior (base, English ablation, Chinese ablation for Qwen), projection matching |
+| `scripts/lang_translate.py`, `lang_judge2.py`, `lang_backtranslate.py`, `lang_examples.py`, `lang_claude.py` | Claude API side: translation, judge (two rubrics), judge-bias check, example glosses, cost ledger |
+| `scripts/lang_analyze.py` | Pre-registered tests and every report number → `results/lang_experiment/summary.json`, `examples.json` |
+| `results/<model>/lang_behavior.jsonl`, `lang_labels.jsonl`, `lang_patch.jsonl`, `lang_direction.json` | Replies, judge labels, projection-matching replies, direction verification and cosine by layer |
+| `results/lang_experiment/` | Summary, examples, back-translation check, cost ledger, pod logs |
+| `scripts/ccp_pilot.py`, `results/Qwen2.5-7B-Instruct/ccp_pilot.jsonl`, `lang_test.jsonl`, `lang_judged.jsonl` | The two earlier pilots |
+
+`src/model.py` gained Chinese refusal tokens and phrases (the original refusal score only recognized English).
+
+## Rerun
+
+```bash
+# Mac: translations (Claude API)
+ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_translate.py
+uv run python scripts/lang_build_prompts.py
+# GPU pod (one H100, ~21 min for both models)
+nohup bash scripts/lang_pod_run.sh > /workspace/logs/lang.log 2>&1 &
+# Mac: judge, checks, analysis
+ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_judge2.py
+ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_backtranslate.py
+uv run python scripts/lang_analyze.py
+ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_examples.py
+```
+
+Cost of the full run: $20.31 (RunPod $1.40, Claude API $14.91, pilots $4).
+
+## Judge
+
+Claude Opus 5.5 sees only the request and reply (not model, language or condition). Checks: a 10% re-score by Claude Sonnet 5.5 agreed 94% (Qwen) and 98% (Llama); 60 Chinese replies back-translated to English and re-judged blind agreed 95% exactly, 98% on censored vs not. 15 of 1,981 replies (all pipe-bomb sanity checks) could not be judged because Claude's safety filter declined; a keyword check shows both models refused them.
+
+## Caveats
+
+- Translations are by Claude with no native-speaker check; translation, register and language are confounded.
+- Small sample: 12 China topics (planned 20; the extra topics were dropped), so the effective n is about 12. The US set is 8 elections.
+- The Chinese refusal direction ablates well but barely induces refusal when added (0.12 vs 5.14 for English).
+- Truncation differs: Llama hits the token cap on 45% of Chinese replies and 0% of English ones.
+- Greedy decoding, one sample per prompt, 7–8B models only. A null for ablation means the gap is not carried by this one direction, not that it has no mechanism.
+
+## Ideas for the next group
+
+1. Native-speaker check of translations and a sample of judge labels.
+2. Find what does carry the official-line behavior: build a direction from official-line vs factual Chinese replies and test it causally.
+3. More China topics (the planned 20) and a second Chinese-lab model to separate Qwen from Chinese labs in general.
+4. Follow up the Q2 reversal (less censorship of US election claims in Chinese) with more prompts.
