@@ -1,41 +1,41 @@
 model,condition,comparison,subset,A,B,p
-Qwen2.5-7B-Instruct,base,overall,all,0.3584558823529412,0.005208333333333333,
-Qwen2.5-7B-Instruct,base,Republican vs Democrat,all-coded,0.36764705882352944,0.2867647058823529,0.06142834573984146
-Qwen2.5-7B-Instruct,base,crossed vs aligned,all-coded,0.25,0.40441176470588236,0.00010371580719947815
-Qwen2.5-7B-Instruct,base,Republican vs Democrat,R-coded,0.47058823529411764,0.23529411764705882,3.0517578125e-05
-Qwen2.5-7B-Instruct,base,crossed vs aligned,R-coded,0.23529411764705882,0.47058823529411764,3.0517578125e-05
-Qwen2.5-7B-Instruct,base,Republican vs Democrat,D-coded,0.2647058823529412,0.3382352941176471,0.266845703125
-Qwen2.5-7B-Instruct,base,crossed vs aligned,D-coded,0.2647058823529412,0.3382352941176471,0.266845703125
-Qwen2.5-7B-Instruct,base,severity,level 1,0.5875,,
-Qwen2.5-7B-Instruct,base,severity,level 2,0.20982142857142858,,
-Qwen2.5-7B-Instruct,base,severity,level 3,0.3375,,
-Qwen2.5-7B-Instruct,ablated,overall,all,0.8161764705882353,0.0,
-Qwen2.5-7B-Instruct,ablated,Republican vs Democrat,all-coded,0.8308823529411765,0.8014705882352942,0.480682373046875
-Qwen2.5-7B-Instruct,ablated,crossed vs aligned,all-coded,0.7941176470588235,0.8382352941176471,0.237884521484375
-Qwen2.5-7B-Instruct,ablated,Republican vs Democrat,R-coded,0.8970588235294118,0.8235294117647058,0.1796875
-Qwen2.5-7B-Instruct,ablated,crossed vs aligned,R-coded,0.8235294117647058,0.8970588235294118,0.1796875
-Qwen2.5-7B-Instruct,ablated,Republican vs Democrat,D-coded,0.7647058823529411,0.7794117647058824,1.0
-Qwen2.5-7B-Instruct,ablated,crossed vs aligned,D-coded,0.7647058823529411,0.7794117647058824,1.0
+Qwen2.5-7B-Instruct,base,overall,all,0.3558823529411765,0.0,
+Qwen2.5-7B-Instruct,base,Republican vs Democrat,all-coded,0.33088235294117646,0.3235294117647059,1.0
+Qwen2.5-7B-Instruct,base,crossed vs aligned,all-coded,0.25735294117647056,0.39705882352941174,0.0005461126565933228
+Qwen2.5-7B-Instruct,base,Republican vs Democrat,R-coded,0.4264705882352941,0.27941176470588236,0.021270751953125
+Qwen2.5-7B-Instruct,base,crossed vs aligned,R-coded,0.27941176470588236,0.4264705882352941,0.021270751953125
+Qwen2.5-7B-Instruct,base,Republican vs Democrat,D-coded,0.23529411764705882,0.36764705882352944,0.0224609375
+Qwen2.5-7B-Instruct,base,crossed vs aligned,D-coded,0.23529411764705882,0.36764705882352944,0.0224609375
+Qwen2.5-7B-Instruct,base,severity,level 1,0.58,,
+Qwen2.5-7B-Instruct,base,severity,level 2,0.21785714285714286,,
+Qwen2.5-7B-Instruct,base,severity,level 3,0.325,,
+Qwen2.5-7B-Instruct,ablated,overall,all,0.8073529411764706,0.0,
+Qwen2.5-7B-Instruct,ablated,Republican vs Democrat,all-coded,0.8602941176470589,0.8014705882352942,0.076812744140625
+Qwen2.5-7B-Instruct,ablated,crossed vs aligned,all-coded,0.8161764705882353,0.8455882352941176,0.454498291015625
+Qwen2.5-7B-Instruct,ablated,Republican vs Democrat,R-coded,0.9558823529411765,0.8676470588235294,0.0703125
+Qwen2.5-7B-Instruct,ablated,crossed vs aligned,R-coded,0.8676470588235294,0.9558823529411765,0.0703125
+Qwen2.5-7B-Instruct,ablated,Republican vs Democrat,D-coded,0.7647058823529411,0.7352941176470589,0.7265625
+Qwen2.5-7B-Instruct,ablated,crossed vs aligned,D-coded,0.7647058823529411,0.7352941176470589,0.7265625
 Qwen2.5-7B-Instruct,ablated,severity,level 1,0.625,,
-Qwen2.5-7B-Instruct,ablated,severity,level 2,0.84375,,
-Qwen2.5-7B-Instruct,ablated,severity,level 3,0.96875,,
-Llama-3.1-8B-Instruct,base,overall,all,0.1636029411764706,0.0,
-Llama-3.1-8B-Instruct,base,Republican vs Democrat,all-coded,0.1323529411764706,0.14705882352941177,0.79052734375
-Llama-3.1-8B-Instruct,base,crossed vs aligned,all-coded,0.09558823529411764,0.18382352941176472,0.0018310546875
-Llama-3.1-8B-Instruct,base,Republican vs Democrat,R-coded,0.14705882352941177,0.07352941176470588,0.0625
-Llama-3.1-8B-Instruct,base,crossed vs aligned,R-coded,0.07352941176470588,0.14705882352941177,0.0625
-Llama-3.1-8B-Instruct,base,Republican vs Democrat,D-coded,0.11764705882352941,0.22058823529411764,0.0390625
-Llama-3.1-8B-Instruct,base,crossed vs aligned,D-coded,0.11764705882352941,0.22058823529411764,0.0390625
-Llama-3.1-8B-Instruct,base,severity,level 1,0.375,,
-Llama-3.1-8B-Instruct,base,severity,level 2,0.09375,,
+Qwen2.5-7B-Instruct,ablated,severity,level 2,0.8321428571428572,,
+Qwen2.5-7B-Instruct,ablated,severity,level 3,0.955,,
+Llama-3.1-8B-Instruct,base,overall,all,0.14705882352941177,0.0,
+Llama-3.1-8B-Instruct,base,Republican vs Democrat,all-coded,0.125,0.16176470588235295,0.266845703125
+Llama-3.1-8B-Instruct,base,crossed vs aligned,all-coded,0.10294117647058823,0.18382352941176472,0.00341796875
+Llama-3.1-8B-Instruct,base,Republican vs Democrat,R-coded,0.1323529411764706,0.08823529411764706,0.25
+Llama-3.1-8B-Instruct,base,crossed vs aligned,R-coded,0.08823529411764706,0.1323529411764706,0.25
+Llama-3.1-8B-Instruct,base,Republican vs Democrat,D-coded,0.11764705882352941,0.23529411764705882,0.021484375
+Llama-3.1-8B-Instruct,base,crossed vs aligned,D-coded,0.11764705882352941,0.23529411764705882,0.021484375
+Llama-3.1-8B-Instruct,base,severity,level 1,0.33,,
+Llama-3.1-8B-Instruct,base,severity,level 2,0.08571428571428572,,
 Llama-3.1-8B-Instruct,base,severity,level 3,0.05,,
-Llama-3.1-8B-Instruct,ablated,overall,all,0.8382352941176471,0.0,
-Llama-3.1-8B-Instruct,ablated,Republican vs Democrat,all-coded,0.8676470588235294,0.8382352941176471,0.3876953125
-Llama-3.1-8B-Instruct,ablated,crossed vs aligned,all-coded,0.8235294117647058,0.8823529411764706,0.03857421875
-Llama-3.1-8B-Instruct,ablated,Republican vs Democrat,R-coded,0.9264705882352942,0.8382352941176471,0.0703125
-Llama-3.1-8B-Instruct,ablated,crossed vs aligned,R-coded,0.8382352941176471,0.9264705882352942,0.0703125
-Llama-3.1-8B-Instruct,ablated,Republican vs Democrat,D-coded,0.8088235294117647,0.8382352941176471,0.625
-Llama-3.1-8B-Instruct,ablated,crossed vs aligned,D-coded,0.8088235294117647,0.8382352941176471,0.625
-Llama-3.1-8B-Instruct,ablated,severity,level 1,0.65625,,
-Llama-3.1-8B-Instruct,ablated,severity,level 2,0.8526785714285714,,
-Llama-3.1-8B-Instruct,ablated,severity,level 3,1.0,,
+Llama-3.1-8B-Instruct,ablated,overall,all,0.8205882352941176,0.0,
+Llama-3.1-8B-Instruct,ablated,Republican vs Democrat,all-coded,0.8529411764705882,0.8308823529411765,0.548828125
+Llama-3.1-8B-Instruct,ablated,crossed vs aligned,all-coded,0.8235294117647058,0.8602941176470589,0.2265625
+Llama-3.1-8B-Instruct,ablated,Republican vs Democrat,R-coded,0.8970588235294118,0.8382352941176471,0.2890625
+Llama-3.1-8B-Instruct,ablated,crossed vs aligned,R-coded,0.8382352941176471,0.8970588235294118,0.2890625
+Llama-3.1-8B-Instruct,ablated,Republican vs Democrat,D-coded,0.8088235294117647,0.8235294117647058,1.0
+Llama-3.1-8B-Instruct,ablated,crossed vs aligned,D-coded,0.8088235294117647,0.8235294117647058,1.0
+Llama-3.1-8B-Instruct,ablated,severity,level 1,0.64,,
+Llama-3.1-8B-Instruct,ablated,severity,level 2,0.825,,
+Llama-3.1-8B-Instruct,ablated,severity,level 3,0.995,,
