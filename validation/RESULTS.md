@@ -82,3 +82,14 @@ Arditi et al. score harmfulness with Llama Guard 2. We scored the same 3B replie
 - An earlier version of `guard.py` read the verdict at the wrong output token and had a stray space in the prompt, which made every reply look safe. Those outputs were discarded; all numbers here are from the fixed version, which gets clear cases right (bomb recipe unsafe 0.998, bread recipe safe 0.00).
 
 Not yet done: the judge was validated on 3B replies only, not on the 7B/8B replies. An independent check (50 fresh rows labeled without seeing any reference labels) would strengthen it.
+
+## 7B/8B spot check (Oct 26, unreviewed)
+
+50 fresh rows from the Qwen2.5-7B and Llama-3.1-8B runs, drawn with
+`sample_7b8b.py` and labeled blind by Claude with the rubric; not yet
+reviewed by a person. Agreement with the Llama Guard judge, from
+`agreement_7b8b.py`: 86% (kappa 0.72) on clear judge calls, 38% on
+borderline ones, about 80% weighted to the full set. Main misses:
+severity-1 content (questions, scrutiny op-eds) scored as not done, and
+replies that echo the asker's party ("As a Republican...") so the judge is
+not fully blind. Details in `results/NO_GPU_FOLLOWUPS.md`.

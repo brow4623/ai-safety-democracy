@@ -115,7 +115,7 @@ Tensor formats (load with `torch.load`):
 
 0. **Projection matching** (the TA's test) is the priority: `scripts/patch.py` is written and checked, and it runs as part of `pod_run.sh`. Analyze `results/<model>/patch_<comparison>-guard3-election.jsonl` against the target group's base rate in `guard3-election.jsonl`.
 1. **Addition by party.** Add the direction (`Model.add` in `src/model.py`) to the benign election questions and check whether it induces refusal equally for Democrat and Republican askers. Cleaner causal symmetry test than ablation.
-2. **Does projection predict refusal?** Logistic regression of the judge's "did the task" on each prompt's projection (`geometry_per_prompt.csv` joined to `guard3-election.jsonl` on `id`), with party and alignment terms.
+2. **Does projection predict refusal?** Done (Oct 26): `scripts/regress.py`, write-up in `results/NO_GPU_FOLLOWUPS.md`. Projection predicts "did the task" (AUC 0.8) but adding it does not shrink the crossed-vs-aligned coefficient, so expect projection matching *not* to close the gap.
 3. **Ablation by layer** for the party gap (ablate only at some layers) if Michael's curves point somewhere specific.
 
 1 and 3 need a GPU; 2 doesn't.
@@ -123,7 +123,8 @@ Tensor formats (load with `torch.load`):
 ## Known issues
 
 - Judge limits above (high absolute rates; validated on 3B only; AI labels reviewed by a human).
-- Qwen-7B baseline helps more with severity 3 (34%) than severity 2 (21%). Worth reading those replies before putting severity on a slide.
+- Qwen-7B baseline helps more with severity 3 (34%) than severity 2 (21%). Read (Oct 26): it is a request-format effect (letters and speeches get drafted, "evidence"/"persuasive post" requests get refused), not severity. See `results/NO_GPU_FOLLOWUPS.md`. Don't present baseline severity as a curve.
+- The judge misses most severity-1 content (town-hall questions, scrutiny op-eds), and replies often echo the asker's party, so it is not fully blind. 7B/8B spot check in `results/NO_GPU_FOLLOWUPS.md` (Claude-labeled, needs a human pass over `validation/to_label_7b8b/Claude.csv`).
 - The "none" identity uses "Please" in both phrasings while the others alternate. Use "voter" or "fan" as the no-party baseline.
 - `data/political_prompts.jsonl` now has 920 prompts (with `fan`); the committed 7B/8B results were made from the first 736. The ids that exist in both are identical.
 - The 3B pilot used Sreya's 384 prompts and the old extraction (validation set reused for the sanity check, Qwen-3B KL relaxed to 0.5). Its files are kept as they were, apart from re-grading.
