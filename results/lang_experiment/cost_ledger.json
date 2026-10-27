@@ -1,0 +1,49 @@
+{
+  "cap_usd": 60.0,
+  "prior_spend_usd": 4.0,
+  "prior_note": "pilot pods (~$1.65) + pilot judging and smoke tests (~$2.35), estimated",
+  "runpod": [
+    {
+      "pod": "4d2mv73qpjz27r",
+      "gpu": "H100 SXM",
+      "rate_usd_hr": 3.99,
+      "created": "2026-10-27T04:35:48Z",
+      "usd": 1.4,
+      "note": "main experiment run",
+      "deleted": "2026-10-27T04:56Z",
+      "minutes": 21
+    }
+  ],
+  "claude": {
+    "translate": {
+      "calls": 246,
+      "input_tokens": 88587,
+      "output_tokens": 15058,
+      "usd": 0.65542
+    },
+    "judge": {
+      "calls": 2026,
+      "input_tokens": 2491801,
+      "output_tokens": 138602,
+      "usd": 12.73932
+    },
+    "judge_recheck": {
+      "calls": 194,
+      "input_tokens": 240257,
+      "output_tokens": 14351,
+      "usd": 0.62406
+    },
+    "backtranslate": {
+      "calls": 60,
+      "input_tokens": 45535,
+      "output_tokens": 28748,
+      "usd": 0.75712
+    },
+    "gloss": {
+      "calls": 11,
+      "input_tokens": 7459,
+      "output_tokens": 5249,
+      "usd": 0.13481
+    }
+  }
+}
