@@ -9,7 +9,7 @@ This is the plan document. It says what is done, what each of us does next, and 
 | Who | Next task | Needs a GPU? | By |
 |---|---|---|---|
 | **Divya** | Draft the left/right and projection-matching slides (`.pt` files are uploaded, see [Where things are](#where-things-are)) | No | Mon |
-| **Michael** | Layer-wise curves: refusal curve and where the party / alignment gap appears ([details](#for-michael-layer-wise-curves-no-gpu-needed)) | No | Tue |
+| **Michael** | Layer-wise curves: **done** ([results](#for-michael-layer-wise-curves-no-gpu-needed)). Slides for that part to Sreya | No | Tue (slides Wed) |
 | **Tyler** | A third model, e.g. Gemma-2-9B-it or a second Chinese-lab model, with `pod_run.sh` ([details](#for-tyler-more-models)) | Yes, about 1 hr on an A40 | **Mon** (away Tue/Wed) |
 | **Skyler** | Causal follow-ups: does projection predict refusal; addition by party ([details](#for-skyler-causal-tests)) | One no, one yes | Wed |
 | **Sreya** | Slides: one section per person, plus the judge finding and the TA-feedback table below | No | Wed |
@@ -144,10 +144,13 @@ Tensor formats (load with `torch.load`):
 
 ## For Michael: layer-wise curves (no GPU needed)
 
-- **Refusal curve across layers:** plot `ablate_harmful` (lower = ablation removes more refusal) and `add_harmless` from `direction_selection.csv` against layer, one line per position. That is the "burden of proof" for the chosen layer. Layers above 80% depth were not scanned, following the paper.
-- **Party and alignment gap across layers:** from `layerwise_projection.csv`, for each layer take matched pairs and plot Democrat minus Republican, and crossed minus aligned, for stolen and benign prompts. Where the gap first appears is the depth result. The Lakers-fan rows give a non-political comparison line.
-- Layer 0 projections are blank on purpose: the template tokens are identical for harmful and harmless prompts at the embeddings, so there is no direction there.
-- For anything else, `political_acts.pt` has every prompt's raw activations at every layer.
+**Done.** `uv run python scripts/layer_curves.py` rebuilds everything from saved results in under a minute: `figures/refusal_curve.png`, `figures/party_gap_by_layer.png`, and `results/party_gap_by_layer.csv` (per layer: gap, CI, dz, sign-flip p, Bonferroni flag). Gaps are a share of each layer's stolen-minus-benign gap, the scale `headline.py` uses.
+
+- **Refusal curve (why the chosen layer):** Llama's layer 13 / position -5 is the strongest ablation of any candidate and passes both filters. In Qwen, 21 candidates at layers 13-21 ablate more than layer 19 / position -2, but every one of them changes harmless outputs too much (KL above 0.1; about half also fail the addition test). Layer 19 / -2 is the strongest candidate that passes. Layers above 80% depth were not scanned, following the paper.
+- **Alignment gap (the depth result):** crossed minus aligned is about 0 in early layers and switches on mid-network, only for stolen requests. First significant (Bonferroni over layers) at **layer 19 of 28 in Qwen** and **layer 11 of 32 in Llama**; 11% and 7% at the chosen layers, peaking at 18% (Qwen, layer 25) and 13% (Llama, layer 18). Benign questions stay at or slightly below 0.
+- **Party label:** Republican minus Democrat is nonzero from the first layers in both models but tracks the benign questions, so it is the party word, not refusal. Party minus Lakers fan is larger and also mostly shared with benign questions (Qwen through layer 18; in Llama the fan prompts sit closer to refusal on both kinds, more so on benign).
+- **Reading:** the model represents *who* is asking early, and combines it with *whose claim it is* only later, around the depth where the refusal direction starts to work.
+- Caveats: each layer uses its own direction, so sign changes across layers compare different directions. Early layers have a small stolen-minus-benign gap, so percentages there are noisy. Layer 0 is blank on purpose (no direction at the embeddings).
 
 ## For Tyler: more models
 
@@ -162,7 +165,7 @@ Tensor formats (load with `torch.load`):
 1. **Does projection predict refusal?** (no GPU) Logistic regression of the judge's "did the task" on each prompt's projection (`geometry_per_prompt.csv` joined to `guard3-election.jsonl` on `id`), with party, alignment and severity terms.
 2. **Addition by party.** (GPU) Add the direction (`Model.add` in `src/model.py`) to the benign election questions and check whether it induces refusal equally for Democrat and Republican askers.
 3. **Projection matching follow-up:** the 1x shift in Llama closes ~64% of the gap but isn't significant at 136 prompts; more prompts or a 2x shift would settle it.
-4. **Ablation by layer** for the alignment gap, if Michael's curves point somewhere specific.
+4. **Ablation by layer** for the alignment gap. Michael's curves say where: the gap switches on at layer 19 in Qwen (flat through 17) and at layer 11 in Llama (peak at 18), so compare ablating only before vs only from those layers.
 
 ## Known issues
 

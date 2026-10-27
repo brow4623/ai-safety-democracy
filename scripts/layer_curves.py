@@ -9,8 +9,9 @@ From saved results only (no GPU):
                  highlighted, the others are gray.
   party gap      at every layer, the paired gap on that layer's own refusal
                  direction (layerwise_projection.csv): crossed minus aligned,
-                 and Republican minus Democrat, for stolen and benign prompts.
-                 Gaps are a share of that layer's stolen-minus-benign gap (the
+                 Republican minus Democrat, and (when the run has the fan
+                 identity) party label minus Lakers fan, the non-political
+                 control, for stolen and benign prompts. Gaps are a share of that layer's stolen-minus-benign gap (the
                  scale headline.py uses), with ~95% CIs (mean +- 1.96 SE over
                  pairs) and sign-flip p-values. Positive = closer to refusal.
 
@@ -117,6 +118,18 @@ def refusal_curve(models):
 
 # ---------------------------------------------------------------- party gap
 
+def pair_gaps(sub, col):
+    """Matched-pair gaps: headline.py's two comparisons, plus party label vs the fan control."""
+    out = []
+    for name, a, b in comparisons(sub):
+        x, y = paired(sub, col, a, b)
+        out.append((name, (x - y).values))
+    p = sub.pivot(index="pair_id", columns="identity", values=col)
+    if "fan" in p:
+        out.append(("party vs fan", ((p.democrat + p.republican) / 2 - p.fan).values))
+    return out
+
+
 def layer_gaps(model):
     df = pd.read_csv(ROOT / "results" / model / "layerwise_projection.csv")
     st = df[df.kind == "stolen"]
@@ -126,10 +139,7 @@ def layer_gaps(model):
         # Same scale as headline.py: stolen prompts (any stated identity) minus benign.
         scale = st[st.identity != "none"].groupby("pair_id")[c].mean().mean() - df[df.kind == "benign"][c].mean()
         for kind in ["stolen", "benign"]:
-            sub = df[df.kind == kind]
-            for name, a, b in comparisons(sub):
-                x, y = paired(sub, c, a, b)
-                gap = (x - y).values
+            for name, gap in pair_gaps(df[df.kind == kind], c):
                 se = gap.std(ddof=1) / np.sqrt(len(gap))
                 lo, hi = sorted([(gap.mean() - 1.96 * se) / scale, (gap.mean() + 1.96 * se) / scale])
                 rows.append({"model": model, "layer": int(c[1:]), "kind": kind, "comparison": name,
@@ -156,8 +166,11 @@ def label_ends(ax, ends):
 
 def party_gap(gaps, models):
     rows = [("crossed vs aligned", "Crossed minus aligned\n(% of stolen-minus-benign gap)"),
-            ("Republican vs Democrat", "Republican minus Democrat\n(% of stolen-minus-benign gap)")]
-    fig, axes = plt.subplots(2, len(models), figsize=(5.4 * len(models), 6.4), sharey="row", squeeze=False)
+            ("Republican vs Democrat", "Republican minus Democrat\n(% of stolen-minus-benign gap)"),
+            ("party vs fan", "Party label minus Lakers fan\n(% of stolen-minus-benign gap)")]
+    rows = [r for r in rows if r[0] in set(gaps.comparison)]
+    fig, axes = plt.subplots(len(rows), len(models), figsize=(5.4 * len(models), 3.1 * len(rows) + 0.2),
+                             sharey="row", squeeze=False)
     for j, model in enumerate(models):
         d = load_direction(model)
         n = int(d["n_layers"])
