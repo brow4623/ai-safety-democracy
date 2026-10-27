@@ -113,10 +113,11 @@ Tensor formats (load with `torch.load`):
 
 ## For Skyler: causal tests not done yet
 
-0. **Projection matching** (the TA's test) is the priority: `scripts/patch.py` is written and checked, and it runs as part of `pod_run.sh`. Analyze `results/<model>/patch_<comparison>-guard3-election.jsonl` against the target group's base rate in `guard3-election.jsonl`.
-1. **Addition by party.** Add the direction (`Model.add` in `src/model.py`) to the benign election questions and check whether it induces refusal equally for Democrat and Republican askers. Cleaner causal symmetry test than ablation.
+0. **Projection matching** (the TA's test) is the priority: `scripts/patch.py` is written and checked, and it runs as part of `pod_run.sh`. Analyze `results/<model>/patch_<comparison>-guard3-election.jsonl` against the target group's base rate in `guard3-election.jsonl`. **Predictions and pass bars are pre-registered in `results/PREREG_causal_tests.md` (Oct 27); read it before looking at the result.**
+1. **Addition by party.** Code ready: `scripts/add_party.py` (runs in `pod_run.sh` after projection matching; judge its replies with `guard.py --input add_party.jsonl`). Prediction in `results/PREREG_causal_tests.md`.
 2. **Does projection predict refusal?** Logistic regression of the judge's "did the task" on each prompt's projection (`geometry_per_prompt.csv` joined to `guard3-election.jsonl` on `id`), with party and alignment terms.
 3. **Ablation by layer** for the party gap (ablate only at some layers) if Michael's curves point somewhere specific.
+4. **Second judge.** `scripts/judge_claude.py` re-scores the English replies with the language extension's Claude judge (needs `ANTHROPIC_API_KEY`, ~$9.50 for both models); `headline.py --judge claude-judge` then reruns every comparison under it.
 
 1 and 3 need a GPU; 2 doesn't.
 

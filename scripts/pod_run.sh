@@ -53,6 +53,11 @@ for m in "${MODELS[@]}"; do
     step "patch-judge-${m##*/}-$c" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
       --input "patch_$c.jsonl"
   done
+  # 6. Addition by party (handoff item 1): add the direction to the benign
+  # election questions and judge the induced replies.
+  step "add-party-${m##*/}" uv run python scripts/add_party.py --model "$m"
+  step "add-party-judge-${m##*/}" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
+    --input "add_party.jsonl"
 done
 
 echo "== ALL DONE $(date -u +%H:%M:%S)"
