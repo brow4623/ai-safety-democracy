@@ -15,8 +15,9 @@ From saved results only (no GPU):
                  scale headline.py uses), with ~95% CIs (mean +- 1.96 SE over
                  pairs) and sign-flip p-values. Positive = closer to refusal.
 
-Writes figures/refusal_curve.png, figures/party_gap_by_layer.png and
-results/party_gap_by_layer.csv, and prints the first layer where each gap
+Writes figures/refusal_curve.png, figures/party_gap_by_layer.png (plus
+slide_alignment_gap.png and slide_party_gap.png, the same rows split for
+slides) and results/party_gap_by_layer.csv, and prints the first layer where each gap
 clears p < 0.05 Bonferroni-corrected over layers.
 
 Usage: uv run python scripts/layer_curves.py Qwen2.5-7B-Instruct Llama-3.1-8B-Instruct
@@ -164,12 +165,13 @@ def label_ends(ax, ends):
                     fontsize=8, color=INK2, annotation_clip=False)
 
 
-def party_gap(gaps, models):
+def party_gap(gaps, models, keep=None, out="party_gap_by_layer.png"):
     rows = [("crossed vs aligned", "Crossed minus aligned\n(% of stolen-minus-benign gap)"),
             ("Republican vs Democrat", "Republican minus Democrat\n(% of stolen-minus-benign gap)"),
             ("party vs fan", "Party label minus Lakers fan\n(% of stolen-minus-benign gap)")]
-    rows = [r for r in rows if r[0] in set(gaps.comparison)]
-    fig, axes = plt.subplots(len(rows), len(models), figsize=(5.4 * len(models), 3.1 * len(rows) + 0.2),
+    rows = [r for r in rows if r[0] in set(gaps.comparison) and (keep is None or r[0] in keep)]
+    height = 3.1 * len(rows) + 0.2
+    fig, axes = plt.subplots(len(rows), len(models), figsize=(5.4 * len(models), height),
                              sharey="row", squeeze=False)
     for j, model in enumerate(models):
         d = load_direction(model)
@@ -186,9 +188,9 @@ def party_gap(gaps, models):
             if j == 0:
                 ax.set_ylabel(label)
         axes[0, j].set_title(f"{model} ({n} layers)", loc="left")
-        axes[0, j].annotate(f"refusal direction\n(layer {int(d['layer'])})", (d["layer"], 1),
-                            xycoords=axes[0, j].get_xaxis_transform(), xytext=(-4, -2),
-                            textcoords="offset points", ha="right", va="top", fontsize=8, color=MUTED)
+        axes[0, j].annotate(f"refusal direction\n(layer {int(d['layer'])})", (d["layer"], 0),
+                            xycoords=axes[0, j].get_xaxis_transform(), xytext=(-4, 3),
+                            textcoords="offset points", ha="right", va="bottom", fontsize=8, color=MUTED)
         axes[-1, j].set_xlabel("Layer")
     # Label line ends once every row's y-limits are final (sharey).
     for j, model in enumerate(models):
@@ -201,8 +203,9 @@ def party_gap(gaps, models):
     fig.text(0.01, 0.005, "Each layer uses its own refusal direction (harmful-minus-harmless mean at that layer). "
              "Positive = closer to refusal. Bands: ~95% CI over matched pairs (136 stolen, 48 benign).",
              fontsize=8, color=MUTED)
-    fig.tight_layout(rect=(0, 0.02, 0.97, 0.96))
-    fig.savefig(FIG / "party_gap_by_layer.png", dpi=200)
+    # Fixed room in inches for the legend above and the note below, whatever the height.
+    fig.tight_layout(rect=(0, 0.22 / height, 0.97, 1 - 0.42 / height))
+    fig.savefig(FIG / out, dpi=200)
     plt.close(fig)
 
 
@@ -228,6 +231,10 @@ def main():
     gaps = pd.concat([layer_gaps(m) for m in models])
     gaps.to_csv(ROOT / "results" / "party_gap_by_layer.csv", index=False)
     party_gap(gaps, models)
+    # Slide versions: one story per figure, larger type.
+    with plt.rc_context({"font.size": 11, "axes.titlesize": 12, "axes.labelsize": 11}):
+        party_gap(gaps, models, ["crossed vs aligned"], "slide_alignment_gap.png")
+        party_gap(gaps, models, ["Republican vs Democrat", "party vs fan"], "slide_party_gap.png")
     print_onsets(gaps, models)
 
 
