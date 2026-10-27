@@ -168,11 +168,11 @@ Takeaway: the refusal direction controls genuine refusal in both languages, but 
 | `data/lang_experiment_prompts.jsonl` | All 278 prompts per model (`pair` links a prompt to its control and translations) |
 | `data/lang_us_zh.json`, `data/lang_anchor_zh.json` | Chinese translations of the election prompts and of Divya's harmful/harmless anchor prompts (11 harmful anchors from MultiJail, marked `source: "multijail"`) |
 | `scripts/lang_pod_run.sh`, `scripts/lang_experiment.py` | GPU side: directions, behavior (base, English ablation, Chinese ablation for Qwen), projection matching |
-| `scripts/lang_translate.py`, `lang_judge2.py`, `lang_backtranslate.py`, `lang_examples.py`, `lang_claude.py` | Claude API side: translation, judge (two rubrics), judge-bias check, example glosses, cost ledger |
+| `scripts/lang_translate.py`, `lang_judge.py`, `lang_backtranslate.py`, `lang_examples.py`, `lang_claude.py` | Claude API side: translation, judge (two rubrics), judge-bias check, example glosses, cost ledger |
 | `scripts/lang_analyze.py` | Pre-registered tests and every report number → `results/lang_experiment/summary.json`, `examples.json` |
 | `results/<model>/lang_behavior.jsonl`, `lang_labels.jsonl`, `lang_patch.jsonl`, `lang_direction.json` | Replies, judge labels, projection-matching replies, direction verification and cosine by layer |
-| `results/lang_experiment/` | Summary, examples, back-translation check, cost ledger, pod logs |
-| `scripts/ccp_pilot.py`, `results/Qwen2.5-7B-Instruct/ccp_pilot.jsonl`, `lang_test.jsonl`, `lang_judged.jsonl` | The two earlier pilots |
+| `results/lang_experiment/` | Summary, examples, back-translation check, cost ledger (pod logs are kept locally in `pod_logs/`, not in git) |
+| `scripts/ccp_pilot.py`, `lang_pilot_run.py`, `lang_pilot_judge.py`, `data/lang_prompts.jsonl`, `results/Qwen2.5-7B-Instruct/ccp_pilot.jsonl`, `lang_test.jsonl`, `lang_judged.jsonl` | The two earlier pilots (superseded; kept as a record) |
 
 `src/model.py` gained Chinese refusal tokens and phrases (the original refusal score only recognized English).
 
@@ -182,10 +182,11 @@ Takeaway: the refusal direction controls genuine refusal in both languages, but 
 # Mac: translations (Claude API)
 ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_translate.py
 uv run python scripts/lang_build_prompts.py
-# GPU pod (one H100, ~21 min for both models)
+# GPU pod (one H100, ~35 min for both models). Needs Divya's results/<model>/direction.json and
+# direction_stability.json, which are in git; writes the .pt direction files it reuses.
 nohup bash scripts/lang_pod_run.sh > /workspace/logs/lang.log 2>&1 &
 # Mac: judge, checks, analysis
-ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_judge2.py
+ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_judge.py Qwen2.5-7B-Instruct Llama-3.1-8B-Instruct
 ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_backtranslate.py
 uv run python scripts/lang_analyze.py
 ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_examples.py
@@ -202,7 +203,7 @@ Claude Opus 5.5 sees only the request and reply (not model, language or conditio
 - Translations are by Claude with no native-speaker check; translation, register and language are confounded.
 - Small sample: 12 China topics (planned 20; drafting the 8 extra topics was interrupted by a safety filter, so the validated set was kept), so the effective n is about 12. The US set is 8 elections.
 - The Chinese refusal direction ablates well but barely induces refusal when added (0.12 vs 5.14 for English).
-- Truncation differs: Llama hits the token cap on 45% of Chinese replies and 0% of English ones.
+- Most replies are cut off at the token cap (300 tokens; 400 for Llama in Chinese): Qwen 44–68% depending on language, Llama 51% in English and 45–50% in Chinese. The judge was told to label where a reply is heading.
 - Greedy decoding, one sample per prompt, 7–8B models only. A null for ablation means the gap is not carried by this one direction, not that it has no mechanism.
 
 ## Ideas for the next group

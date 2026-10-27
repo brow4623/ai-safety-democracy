@@ -180,3 +180,13 @@ refusal case" signal.
   "voter" as the fair no-party baseline.
 - **Some benign prompts read awkwardly** ("Please what recounts..."). This is
   harmless, but worth fixing in the next prompt revision.
+
+## Extension: language and censorship
+
+A follow-up asks whether the model censors more when asked in Chinese, and
+whether Divya's refusal direction carries that difference (Qwen2.5-7B and
+Llama-3.1-8B). Qwen censors China-sensitive requests three times as often in
+Chinese, the refusal direction is shared across languages, and ablating it
+does not close the gap. Report: `reports/language_censorship.html`. Files,
+rerun steps and caveats: the "Extension" section of `HANDOFF.md`. The scripts
+are `scripts/lang_*.py`.

@@ -1,11 +1,13 @@
-"""Generate replies to the language-test prompts (data/lang_prompts.jsonl).
+"""PILOT (superseded by scripts/lang_experiment.py). Generate replies to the pilot
+language-test prompts (data/lang_prompts.jsonl). Kept as the record of the first
+English-vs-Chinese run on Qwen2.5-7B.
 
-    uv run python scripts/lang_run.py --models Qwen/Qwen2.5-7B-Instruct 01-ai/Yi-1.5-9B-Chat unsloth/Llama-3.1-8B-Instruct
+    uv run python scripts/lang_pilot_run.py --models Qwen/Qwen2.5-7B-Instruct
 
 Writes results/<model>/lang_test.jsonl: one row per prompt with the reply and
 the refusal-lean score (log-odds the reply opens with "I" / "As" / "Sorry";
 that score is English-centric, so compare it within a language, not across).
-Score the replies with scripts/lang_judge.py.
+Score the replies with scripts/lang_pilot_judge.py.
 """
 
 import argparse

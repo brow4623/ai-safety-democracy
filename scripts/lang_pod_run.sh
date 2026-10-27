@@ -23,9 +23,11 @@ step setup uv sync
 step qwen-direction uv run python scripts/lang_experiment.py --model Qwen/Qwen2.5-7B-Instruct --stage direction
 step qwen-behavior  uv run python scripts/lang_experiment.py --model Qwen/Qwen2.5-7B-Instruct --stage behavior --ablate-zh
 step qwen-patch     uv run python scripts/lang_experiment.py --model Qwen/Qwen2.5-7B-Instruct --stage patch
+step qwen-censordir uv run python scripts/lang_censordir.py --model Qwen/Qwen2.5-7B-Instruct
 
 step llama-direction uv run python scripts/lang_experiment.py --model unsloth/Llama-3.1-8B-Instruct --stage direction
 step llama-behavior  uv run python scripts/lang_experiment.py --model unsloth/Llama-3.1-8B-Instruct --stage behavior
 step llama-patch     uv run python scripts/lang_experiment.py --model unsloth/Llama-3.1-8B-Instruct --stage patch
+step llama-censordir uv run python scripts/lang_censordir.py --model unsloth/Llama-3.1-8B-Instruct
 
 echo "== ALL DONE $(date -u +%H:%M:%S)"
