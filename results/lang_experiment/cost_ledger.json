@@ -12,6 +12,13 @@
       "note": "main experiment run",
       "deleted": "2026-10-27T04:56Z",
       "minutes": 21
+    },
+    {
+      "pod": "lang-censordir",
+      "gpu": "H100",
+      "minutes": 15,
+      "usd": 1.0,
+      "note": "plan step B5, run after main pipeline"
     }
   ],
   "claude": {

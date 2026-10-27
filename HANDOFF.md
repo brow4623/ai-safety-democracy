@@ -154,6 +154,8 @@ Does asking in Chinese instead of English change what a model refuses, and is th
 | Q4. Does removing the direction close the language gap? | **No for Qwen on China topics (the main finding).** The gap goes from 42 to 46 points after ablation. Most of it is official-line answers (29 of 42 points), which ablation leaves unchanged; projection matching agrees. **Yes for Llama on US elections, with caveats**: the gap goes from −17 to +4 points, mostly because ablation removes nearly all refusals, and raising projections increases refusal (52% → 81%, random direction 33%). Two of the pre-registered Q4 checks (bootstrap interval, five random directions) were not computed for the ablation runs. |
 | Q5. Do models differ? | **Each model guards its own country.** Qwen censors 62% of China-sensitive prompts in Chinese, Llama 0% in every language. Llama refuses 69% of US election prompts in English, Qwen 19%. |
 
+Plan step B5, the "censorship direction" (what Chinese adds on sensitive prompts beyond what it adds on controls): in Qwen it points partly along the refusal direction (cosine 0.65, shuffle-test p = 0.02, about 14% of the refusal direction's size); in Llama it does not (0.08, p = 0.51). So Qwen registers "sensitive in Chinese" on its refusal axis, but removing that axis does not stop the official-line answers. Results: `results/<model>/lang_censordir.json`, script `scripts/lang_censordir.py`.
+
 Takeaway: the refusal direction controls genuine refusal in both languages, but Qwen's Chinese-language censorship is mostly state-aligned framing that does not run through it. An English refusal audit would miss it.
 
 "Censored" = official line + dodges + refuses. On election prompts, pushback against the false claim is counted separately and never as censorship.
@@ -189,7 +191,7 @@ uv run python scripts/lang_analyze.py
 ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_examples.py
 ```
 
-Cost of the full run: $20.31 (RunPod $1.40, Claude API $14.91, pilots $4).
+Cost of the full run: $21.31 (RunPod $2.40, Claude API $14.91, pilots $4).
 
 ## Judge
 
@@ -198,7 +200,7 @@ Claude Opus 5.5 sees only the request and reply (not model, language or conditio
 ## Caveats
 
 - Translations are by Claude with no native-speaker check; translation, register and language are confounded.
-- Small sample: 12 China topics (planned 20; the extra topics were dropped), so the effective n is about 12. The US set is 8 elections.
+- Small sample: 12 China topics (planned 20; drafting the 8 extra topics was interrupted by a safety filter, so the validated set was kept), so the effective n is about 12. The US set is 8 elections.
 - The Chinese refusal direction ablates well but barely induces refusal when added (0.12 vs 5.14 for English).
 - Truncation differs: Llama hits the token cap on 45% of Chinese replies and 0% of English ones.
 - Greedy decoding, one sample per prompt, 7–8B models only. A null for ablation means the gap is not carried by this one direction, not that it has no mechanism.
