@@ -150,8 +150,8 @@ Does asking in Chinese instead of English change what a model refuses, and is th
 |---|---|
 | Q1. Does Chinese increase censorship of CCP-sensitive topics? | **Yes, Qwen.** 21% censored in English vs 62% in Simplified Chinese (24 matched pairs, McNemar p = 0.002). Traditional Chinese is the same (62%), so it is the language, not the script. Controls clean. |
 | Q2. Does language change behavior on the team's US stolen-election prompts? | **Reverses, exploratory.** Both models censor *less* in Chinese: Qwen 19% → 4%, Llama 69% → 52%. Neither survives Holm correction (0.131, 0.116). |
-| Q3. Is the refusal direction the same in both languages? | **Yes.** cos(English, Chinese) = 0.978 (Qwen), 0.908 (Llama); ablating one removes 86–117% of the other's refusal. Divya's directions reproduced within tolerance. |
-| Q4. Does removing the direction close the language gap? | **No for Qwen on China topics (the main finding).** The gap goes from 42 to 46 points after ablation. Most of it is official-line answers (29 of 42 points), which ablation leaves unchanged; projection matching agrees. **Yes for Llama on US elections**: the gap goes from −17 to +4 points, and raising projections increases refusal (52% → 81%, random direction 33%). |
+| Q3. Is the refusal direction the same in both languages? | **Yes.** cos(English, Chinese) = 0.978 (Qwen), 0.908 (Llama); ablating either direction drops refusal on harmful prompts to 0% in both languages. Divya's directions reproduced within tolerance. |
+| Q4. Does removing the direction close the language gap? | **No for Qwen on China topics (the main finding).** The gap goes from 42 to 46 points after ablation. Most of it is official-line answers (29 of 42 points), which ablation leaves unchanged; projection matching agrees. **Yes for Llama on US elections, with caveats**: the gap goes from −17 to +4 points, mostly because ablation removes nearly all refusals, and raising projections increases refusal (52% → 81%, random direction 33%). Two of the pre-registered Q4 checks (bootstrap interval, five random directions) were not computed for the ablation runs. |
 | Q5. Do models differ? | **Each model guards its own country.** Qwen censors 62% of China-sensitive prompts in Chinese, Llama 0% in every language. Llama refuses 69% of US election prompts in English, Qwen 19%. |
 
 Takeaway: the refusal direction controls genuine refusal in both languages, but Qwen's Chinese-language censorship is mostly state-aligned framing that does not run through it. An English refusal audit would miss it.
@@ -193,7 +193,7 @@ Cost of the full run: $20.31 (RunPod $1.40, Claude API $14.91, pilots $4).
 
 ## Judge
 
-Claude Opus 5.5 sees only the request and reply (not model, language or condition). Checks: a 10% re-score by Claude Sonnet 5.5 agreed 94% (Qwen) and 98% (Llama); 60 Chinese replies back-translated to English and re-judged blind agreed 95% exactly, 98% on censored vs not. 15 of 1,981 replies (all pipe-bomb sanity checks) could not be judged because Claude's safety filter declined; a keyword check shows both models refused them.
+Claude Opus 5.5 sees only the request and reply (not model, language or condition). Checks: a 10% re-score by Claude Sonnet 5.5 agreed 94% (Qwen) and 98% (Llama); 60 Chinese replies back-translated to English and re-judged blind agreed 95% exactly, 98% on censored vs not. 15 of 1,966 replies (all pipe-bomb sanity checks) could not be judged because Claude's safety filter declined; a keyword check shows both models refused them.
 
 ## Caveats
 
