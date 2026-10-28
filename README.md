@@ -168,7 +168,7 @@ Arizona 2022) 47% of the time, a Democrat with the same request 24%.
 |---|---|---|
 | Aligned vs crossed, base, Claude judge | 60% vs 45%, p < 0.001 | 33% vs 26%, p = 0.012 |
 | Republican vs Democrat, base, Claude judge | 52% vs 53%, p = 0.84 | 28% vs 32%, p = 0.23 |
-| Projection matching: aligned raised to crossed projection (Guard / Claude) | 40 to 42% / 61 to 61%, random same | 18 to 6% / 34 to 18%, random unchanged |
+| Projection matching, constant shift by the gap: aligned did the task (Guard / Claude) | 40 to 39% / 61 to 57%, n.s. (5-23% of gap) | 18 to 13% (p = 0.09) / 34 to 29% (p = 0.016), 64-70% of gap |
 | Addition: Republican minus Democrat induced refusal, share of the shift | 0.3% | 0.6% |
 | Lakers fan minus voter, did the task, base (Guard / Claude) | -11 / -12 pts, p < 0.01 | -4 n.s. / -12 pts, p < 0.001 |
 | cos(alignment direction, refusal direction), chosen layer | 0.60, p < 0.001 | 0.21, n.s. |
@@ -178,12 +178,13 @@ Arizona 2022) 47% of the time, a Democrat with the same request 24%.
 
 1. **Both models favor your own side's claim**, and it is the robust
    finding: two judges, two generation runs, within matched pairs.
-2. **Where it lives differs by model.** In Llama the alignment gap runs
-   through the refusal direction: a shift of a fifth of a standard
-   deviation along it flips aligned prompts to crossed behavior, and a
-   random shift does nothing. In Qwen the same-sized shift is inert; the
-   gap is carried by a distinct direction that overlaps refusal by cos 0.6
-   and whose orthogonal part does the work.
+2. **Where it lives differs by model.** In Llama the refusal direction
+   plausibly carries most of the alignment gap: a constant shift along it
+   by the measured gap closes about 70%, and a random shift does nothing.
+   In Qwen the same test closes a fifth at most; the gap is carried by a
+   distinct alignment direction that overlaps refusal by cos 0.6 and whose
+   orthogonal part does the work. Divya's dose series (3x, 10x) shows the
+   direction controls compliance in both models.
 3. **The party-label effects were never about party.** "I'm a Lakers fan"
    lowers compliance by 12 points in both models, as much as or more than
    "I'm a Democrat", and moves the projection as much. Qwen's apparent
@@ -235,9 +236,11 @@ HANDOFF.md for the file index and formats.
 
 - **Judge:** validated on 3B replies only; over-counts debunking replies as
   compliant; reference labels are AI-written and human-reviewed.
-- **Greedy decoding is not bit-reproducible across GPUs.** The Oct 28 rerun
-  reproduced 29% (Qwen) and 60% (Llama) of replies exactly, but group rates
-  within 4 points. Compare groups, not individual replies, across runs.
+- **Greedy decoding depends on the batch.** The 920-prompt reruns (Divya's
+  second run and the Oct 28 pod run) are byte-identical to each other but
+  reproduce only 29% (Qwen) and 60% (Llama) of the 736-prompt first run's
+  replies exactly; group rates agree within 4 points. Compare groups, not
+  individual replies, across runs.
 - **Qwen-7B's baseline is non-monotonic in severity** (34% at level 3 vs 21%
   at level 2). Read those replies before putting severity on a slide.
 - **The "none" baseline differs in wording** from the identity prompts. Use

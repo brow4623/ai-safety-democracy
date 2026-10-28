@@ -13,43 +13,53 @@ Scripts: `patch_analyze.py`, `identity_control.py`, `add_party.py`'s
 `add_party_test.csv`, `alignment_dir.py`. Summary CSVs:
 `patch_summary*.csv`, `identity_control*.csv`.
 
-## A. Projection matching: the two models split
+## A. Projection matching: Llama mostly through the direction, Qwen mostly not
 
-`patch.py` raises the lower-projection group to the higher group's mean
-projection at the chosen layer by adding a multiple of the unit refusal
-direction, then judges the replies. For both comparisons the lower group was
-**aligned** (alignment) and **Democrat** (party), so the test is: does
-pushing them *up* the refusal direction, to where crossed / Republican
-prompts sit, make them behave like that group?
+**Credit and provenance.** Divya ran projection matching on Oct 25-26
+(PR #2, branch `blind-judge`), with three controls that the pre-registered
+version did not have: setting each prompt to its *own* group's mean (which
+leaves the gap untouched), a constant shift by the group-mean gap (which
+keeps each prompt's place in the spread), and a dose series (3x and 10x
+the gap, 10x also along a random direction). The pod run on Oct 27-28
+reproduced her second run byte for byte (same prompts, code and GPU
+class; see E), so the "set to the target mean" numbers below are the same
+in both runs. The constant shift is the clean test; the set-to-mean
+version is confounded, as the own-mean control shows.
 
-"Did the task", source group: base, patched, random-direction control; and
-the target group's base rate.
+All comparisons raise the lower-projection group (**aligned**, and
+**Democrat**) along the unit refusal direction at the chosen layer.
+"Did the task", aligned prompts (136), both judges:
 
-| Model, comparison | Judge | Source base | Patched | Random | Target base | p (patched vs base) |
-|---|---|---|---|---|---|---|
-| Qwen, aligned raised to crossed (shift 1.56) | Guard | 40% | 42% | 41% | 26% | 0.75 |
-| | Claude | 61% | 61% | 61% | 45% | 1.0 |
-| Qwen, Democrat raised to Republican (shift 0.48) | Guard | 32% | 38% | 33% | 33% | 0.25 |
-| | Claude | 54% | 57% | 57% | 52% | 0.54 |
-| Llama, aligned raised to crossed (shift 0.14) | Guard | 18% | **6%** | 16% | 10% | 0.002 |
-| | Claude | 34% | **18%** | 34% | 26% | <0.001 |
-| Llama, Democrat raised to Republican (shift 0.09) | Guard | 16% | **3%** | 13% | 13% | <0.001 |
-| | Claude | 31% | **15%** | 32% | 28% | <0.001 |
+| Intervention | Qwen Guard | Qwen Claude | Llama Guard | Llama Claude |
+|---|---|---|---|---|
+| Before: aligned / crossed | 40% / 26% | 61% / 45% | 18% / 10% | 34% / 27% |
+| Each prompt set to the crossed mean (pre-registered test) | 42%, p = 0.75 | 61%, p = 1.0 | 6%, p = 0.002 | 18%, p < 0.001 |
+| Each prompt set to its **own** group mean (control: gap unchanged) | 46%, p = 0.24 | 65%, p = 0.33 | 10%, p = 0.04 | 22%, p = 0.005 |
+| **Constant shift by the gap, 1x (the clean test)** | **39%, p = 1.0** | **57%, p = 0.23** | **13%, p = 0.09** | **29%, p = 0.016** |
+| share of the gap closed by the 1x shift | 5% | 23% | 64% | 70% |
+| Constant shift 3x | 31%, p = 0.02 | | 10%, p = 0.008 | |
+| Constant shift 10x | 15%, p < 1e-7 | | 0%, p < 1e-7 | |
+| 10x shift along a random direction | 41% | | 14% | |
+| Democrat raised to Republican, 1x constant shift | 31% (from 32%) | 53% (from 56%) | 15% (from 16%) | 30% (from 31%) |
 
-- **Qwen: as predicted (A1).** Moving aligned prompts 1.56 units up the
-  refusal direction, a fifth of a standard deviation but the full
-  crossed-minus-aligned gap, changes nothing under either judge. The
-  refusal direction does not carry Qwen's alignment asymmetry.
-- **Llama: the opposite.** A shift of 0.14 units, also a fifth of a
-  standard deviation, cuts aligned prompts' compliance by two thirds and
-  overshoots the crossed rate; the random direction of the same size does
-  nothing. Same for party. The refusal direction carries Llama's gap, and
-  Llama is far more sensitive to small moves along it than Qwen (the
-  language extension saw the same: 23 points from a one-SD shift).
-- **A2 (party) in Qwen:** Democrats raised to the Republican projection
-  comply slightly *more*, not less, n.s. As predicted, this test cannot
-  produce a party mechanism in Qwen; and the party gap itself did not
-  reproduce (see F).
+- **The set-to-mean test is confounded.** Setting each prompt to its own
+  group's mean, which does not move the gap, drops Llama's compliance from
+  18% to 10% (Guard) and 34% to 22% (Claude). So most of what "set to the
+  crossed mean" measures in Llama is the removal of spread across prompts,
+  not the gap. The constant shift is the number to quote.
+- **Llama: the refusal direction plausibly carries most of the gap.** A
+  constant shift by exactly the measured gap (0.14 units) closes 64-70% of
+  it: significant under the Claude judge (p = 0.016), short of it under
+  Guard (p = 0.09) at 136 prompts. Divya's suggested follow-up, a 2x
+  shift or more prompts, would settle it.
+- **Qwen: the refusal direction carries little of the gap.** The 1x shift
+  (1.56 units) closes 5% (Guard) to 23% (Claude), neither significant.
+  The direction does control Qwen's compliance: 3x closes 63% and 10x
+  overshoots, with the random direction flat. But it takes three times
+  the measured gap to produce a gap-sized effect, so the gap itself mostly
+  comes from somewhere else. Section D finds where.
+- **Party:** there is no party gap to explain (32% vs 33% in Qwen), and
+  the 1x shift changes nothing in either model under either judge.
 
 ## B. Addition by party: symmetric
 
@@ -153,32 +163,38 @@ brings them up to the aligned rate, adding it to aligned prompts does not
 bring them down. In Llama the alignment gap lives on the refusal direction
 itself (A), and a is a weaker, partly redundant handle on it.
 
-## E. Reproducibility of the behavioral results
+## E. Reproducibility: two runs, two prompt sets
 
-The pod regenerated every reply with the same greedy decoding on a
-different GPU than the Oct 25 run.
+Three generation runs exist for the 7B/8B models: Divya's first (Oct 25,
+736 prompts), Divya's second (Oct 25-26, 920 prompts with the fan
+identity, in PR #2), and the Oct 27-28 pod run (920 prompts, this
+branch). The second and third are **byte-identical** in every reply,
+judge label and projection: same prompts, code and GPU class give the same
+greedy output. The first differs from both:
 
-| | Qwen | Llama |
+| First run vs rerun | Qwen | Llama |
 |---|---|---|
-| Replies byte-identical to Oct 25 | 29% | 60% |
+| Replies byte-identical | 29% | 60% |
 | Same first 40 characters | 91% | 92% |
-| Guard label agreement, old vs new | 90-96% | 97-99% |
-| Aligned / crossed, base, Guard, old to new | 40 / 25 to 40 / 26 | 18 / 10 to 18 / 10 |
-| Republican / Democrat, base, Guard, old to new | **37 / 29 to 33 / 32** | 13 / 15 to 13 / 16 |
+| Guard label agreement | 90-96% | 97-99% |
+| Aligned / crossed, base, Guard | 40 / 25 to 40 / 26 | 18 / 10 to 18 / 10 |
+| Republican / Democrat, base, Guard | **37 / 29 to 33 / 32** | 13 / 15 to 13 / 16 |
 
-Greedy decoding is not bit-reproducible across hardware, but group rates
-are. The alignment effect reproduces to the point. Qwen's Republican-vs-
-Democrat gap (p = 0.06 on Oct 25) does not reproduce under the same judge,
-which settles it as noise, on top of its disappearance under the Claude
-judge.
+The difference between the first run and the rerun is the prompt set
+(736 vs 920 changes the batch composition and so the padding and numerics),
+not the hardware. Group rates agree within 4 points; the alignment effect
+reproduces to the point; Qwen's Republican-vs-Democrat gap (p = 0.06 in
+the first run) does not, which with its disappearance under the Claude
+judge settles it as noise. Compare groups across runs, not individual
+replies.
 
 ## F. Pre-registration verdicts
 
 | Prediction | Verdict |
 |---|---|
-| A1 Qwen: projection matching closes < 25% of the alignment gap | **Held.** 0% under both judges. |
-| A1 Llama: (amended) about 40% closed under Claude | **Exceeded.** 220% under Claude, 150% under Guard; random control 0%. The gap runs through the direction. |
-| A2: party matching moves Democrats toward refusal by < 5 points | Qwen: moved the other way, n.s. Llama: moved toward refusal by 13-15 points, overshooting Republicans. **Llama fails the "small" prediction in the informative direction.** |
+| A1 Qwen: projection matching closes < 25% of the alignment gap | **Held.** Clean 1x shift: 5% (Guard), 23% (Claude), neither significant. |
+| A1 Llama: (amended) about 40% closed under Claude | **Exceeded, with Divya's clean test.** 1x constant shift closes 70% (Claude, p = 0.016) / 64% (Guard, p = 0.09). The pre-registered set-to-mean version overshoots (150-220%) but is confounded by spread removal (own-mean control). |
+| A2: party matching moves Democrats toward refusal by < 5 points | **Held** with the clean shift: 1-3 points in both models, n.s. The set-to-mean version in Llama (16% to 3%) is the same spread artifact. |
 | B: induced refusal symmetric, < 10% of rise, p > 0.05 | **Magnitude held** (< 1%); p-value bar failed in Llama at coeff 1 and Qwen at coeff 2. |
 | C: fan within 5 points of voter | **Failed in both models** under Claude (-12 in each, p < 0.01); under Guard failed in Qwen (-11) and held in Llama (-4, n.s.). |
 | D1-D4: second judge | All held (NO_GPU_FOLLOWUPS.md section 4). |
@@ -187,11 +203,13 @@ judge.
 
 1. **Both models favor the asker's own side's claim, and the effect is
    robust**: two judges, two generation runs, within-pair.
-2. **Where it lives differs by model.** In Llama it is the refusal
-   direction: a tiny push along it flips aligned prompts to crossed
-   behavior. In Qwen the refusal direction is inert for this, and the gap
-   is carried by a distinct direction that overlaps refusal by cos 0.6 and
-   whose orthogonal part does the work.
+2. **Where it lives differs by model.** In Llama the refusal direction
+   plausibly carries most of the gap: a constant shift by the measured gap
+   closes about 70% of it. In Qwen the same test closes a fifth at most,
+   and the gap is carried by a distinct alignment direction that overlaps
+   refusal by cos 0.6 and whose orthogonal part does the work. The
+   direction controls compliance in both models (dose series), but only in
+   Llama does the *measured* gap-sized shift do gap-sized work.
 3. **The party-label effects were never about party.** A Lakers fan is
    helped 12 points less than a plain voter in both models, as much as or
    more than a party label, and sits as high on the refusal direction.
@@ -203,9 +221,12 @@ judge.
 ## Limits and tomorrow's one GPU item
 
 - The shift test in D has no random-direction control of its own; the
-  closest control is the random shift in A (1.56 units in Qwen, 0.14 in
-  Llama), which did nothing. A same-norm random shift at 3.4 units in Qwen
-  should be run.
+  closest controls are the random shifts in A (1.56 units and 15.6 units
+  in Qwen, 0.14 and 1.4 in Llama), all flat. `alignment_decompose.py`
+  adds a same-norm random control.
+- Llama's 64-70% in A is from 136 prompts; Divya's suggested 2x shift (or
+  more prompts) would settle whether the direction carries most or all of
+  Llama's gap.
 - The decomposition the Qwen result implies, shifting by a's component
   orthogonal to refusal vs its parallel component, has not been run. It is
   one script change and ten minutes on a pod, and it would turn "inferred"
