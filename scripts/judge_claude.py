@@ -26,6 +26,7 @@ Usage:
 """
 
 import argparse
+import hashlib
 import json
 import random
 import sys
@@ -38,8 +39,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "src"))
 from grade import blind  # noqa: E402
+import lang_claude  # noqa: E402
 from lang_claude import call_json, check_budget  # noqa: E402
 from lang_judge2 import RUBRIC_US, SCHEMA  # noqa: E402
+
+lang_claude.CAP = 120.0  # the ledger's $60 cap was the language extension's; this judge shares the ledger
 
 COST_PER_CALL = 0.0065
 
@@ -56,9 +60,11 @@ def judge_one(uid, request, reply, model="claude-opus-5-5"):
     return {"uid": uid, **out, "judge": model}
 
 
-def score(model_dir, input_name, recheck_frac):
+def score(model_dir, input_name, recheck_frac, identities=None):
     d = ROOT / "results" / model_dir
     df = pd.read_json(d / input_name, lines=True)
+    if identities:
+        df = df[df.identity.isin(identities)].reset_index(drop=True)
     conds = [c[len("reply_"):] for c in df.columns if c.startswith("reply_")]
     requests = df.instruction.map(blind).tolist()
     cache_path = d / "claude-judge_cache.jsonl"
@@ -67,7 +73,7 @@ def score(model_dir, input_name, recheck_frac):
     todo = []
     for cond in conds:
         for i, (pid, reply) in enumerate(zip(df.id, df[f"reply_{cond}"])):
-            uid = f"{input_name}|{pid}|{cond}"
+            uid = f"{input_name}|{pid}|{cond}|{hashlib.sha1(str(reply).encode()).hexdigest()[:8]}"
             if uid not in cache or cache[uid].get("label") is None:
                 todo.append((uid, requests[i], reply))
     print(f"{model_dir}/{input_name}: {len(df)} rows x {conds} = {len(df) * len(conds)} replies, "
@@ -85,8 +91,11 @@ def score(model_dir, input_name, recheck_frac):
         for row in cache.values():
             f.write(json.dumps(row) + "\n")
 
+    def key(pid, cond, reply):
+        return f"{input_name}|{pid}|{cond}|{hashlib.sha1(str(reply).encode()).hexdigest()[:8]}"
+
     for cond in conds:
-        rows = [cache[f"{input_name}|{pid}|{cond}"] for pid in df.id]
+        rows = [cache[key(pid, cond, reply)] for pid, reply in zip(df.id, df[f"reply_{cond}"])]
         df[f"claude_label_{cond}"] = [r.get("label") for r in rows]
         df[f"claude_note_{cond}"] = [r.get("note") for r in rows]
         did = [r.get("did_task") for r in rows]
@@ -95,13 +104,16 @@ def score(model_dir, input_name, recheck_frac):
         print(f"  {cond}: did_task {pd.Series(did).mean():.3f}, labels "
               f"{pd.Series([r.get('label') for r in rows]).value_counts().to_dict()}", flush=True)
     df["guard_model"] = "claude-opus-5-5 (RUBRIC_US)"
-    out = d / ("claude-judge.jsonl" if input_name == "behavior.jsonl" else f"{Path(input_name).stem}-claude-judge.jsonl")
+    stem = "claude-judge" if input_name == "behavior.jsonl" else f"{Path(input_name).stem}-claude-judge"
+    if identities:
+        stem += "-" + "-".join(identities)
+    out = d / f"{stem}.jsonl"
     df.drop(columns=[f"reply_{c}" for c in conds]).to_json(out, orient="records", lines=True)
     print(f"wrote {out}", flush=True)
 
     if recheck_frac > 0:
-        pool = [(uid, requests[i], df[f"reply_{cond}"].iloc[i]) for cond in conds
-                for i, uid in enumerate(f"{input_name}|{pid}|{cond}" for pid in df.id) if cache[uid].get("label")]
+        pool = [(key(pid, cond, df[f"reply_{cond}"].iloc[i]), requests[i], df[f"reply_{cond}"].iloc[i]) for cond in conds
+                for i, pid in enumerate(df.id) if cache[key(pid, cond, df[f"reply_{cond}"].iloc[i])].get("label")]
         sample = random.Random(0).sample(pool, max(1, int(recheck_frac * len(pool))))
         rc_path = d / "claude-judge_recheck.jsonl"
         rc = {r["uid"]: r for r in map(json.loads, open(rc_path))} if rc_path.exists() else {}
@@ -122,9 +134,10 @@ def main():
     ap.add_argument("models", nargs="+", help="results folder names")
     ap.add_argument("--input", default="behavior.jsonl")
     ap.add_argument("--recheck", type=float, default=0.10, help="fraction re-scored by Sonnet (0 to skip)")
+    ap.add_argument("--identities", nargs="+", help="judge only these identities; output gets a -<identities> suffix")
     args = ap.parse_args()
     for m in args.models:
-        score(m, args.input, args.recheck)
+        score(m, args.input, args.recheck, args.identities)
 
 
 if __name__ == "__main__":

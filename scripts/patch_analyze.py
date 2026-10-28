@@ -54,8 +54,9 @@ def analyze(d, model, comparison, judge):
             "n": len(pat), "mean_shift": pat.delta.mean(), "source_base": src_base, "patched": patched,
             "random": rand, "target_base": tgt_rate, "gap": gap, "closed_by_patch": closed,
             "closed_by_random": closed_r, "p_patched_vs_base": p_patch, "p_random_vs_base": p_rand,
-            "verdict": ("gap runs through the direction" if closed >= 0.5 and closed_r < 0.25 else
-                        "as predicted: direction does not carry the gap" if closed < 0.25 else "ambiguous")}
+            "verdict": ("gap runs through the direction" if closed >= 0.5 and p_patch < 0.05 and (closed_r < 0.25 or p_rand > 0.1) else
+                        "direction does not carry the gap" if closed < 0.25 or p_patch > 0.1 else
+                        "partial" if 0.25 <= closed < 0.5 and p_patch < 0.05 else "ambiguous")}
 
 
 def main():

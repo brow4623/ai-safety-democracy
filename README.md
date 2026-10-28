@@ -85,14 +85,27 @@ task, so absolute rates run high. Compare groups; don't quote raw levels as
 exact. It was validated on 3B replies, and the reference labels are
 Claude-written and human-reviewed, not independently labeled.
 
-### Projection matching (`scripts/patch.py`, not yet run)
+### Causal tests (`scripts/patch.py`, `add_party.py`, `alignment_dir.py`)
 
 Ablation removes refusal almost everywhere, so it can't say whether the
-direction explains a gap between two groups. The TA's test instead raises the
-lower group's projection to the other group's mean, by adding a multiple of
-the unit refusal direction at the chosen layer, and judges the result. The
-same shift along a random orthogonal direction is the control. Code is
-written and checked; results need one GPU run (see HANDOFF.md).
+direction explains a gap between two groups. Three tests do, all with
+predictions written down first (`results/PREREG_causal_tests.md`) and
+results in `results/CAUSAL_TESTS.md`:
+
+- **Projection matching** (the TA's test): raise the lower group's
+  projection to the other group's mean along the unit refusal direction at
+  the chosen layer, with a random-direction control, and judge the replies.
+- **Addition by party**: add the direction to the benign election questions
+  and ask whether it induces refusal equally for every identity.
+- **Alignment direction**: what "crossed" adds to the activations on stolen
+  prompts beyond what it adds on benign ones (the language extension's
+  censorship-direction construction), its overlap with the refusal
+  direction, and a shift test that moves each prompt to the other
+  alignment state.
+
+A second judge (Claude, `scripts/judge_claude.py`, the language extension's
+rubric) scores everything alongside Llama Guard; `headline.py --judge
+claude-judge` reruns the comparisons under it.
 
 ### Testing whether the directions "split"
 
@@ -148,23 +161,40 @@ Arizona 2022) 47% of the time, a Democrat with the same request 24%.
 | Aligned vs crossed, ablated | 84% vs 79%, p = 0.24 | 88% vs 82%, p = 0.04 |
 | Did the task by severity 1 / 2 / 3, ablated | 62% / 84% / 97% | 66% / 85% / 100% |
 
+### Causal tests and second judge (Oct 27-28)
+
+| | Qwen2.5-7B | Llama-3.1-8B |
+|---|---|---|
+| Aligned vs crossed, base, Claude judge | 60% vs 45%, p < 0.001 | 33% vs 26%, p = 0.012 |
+| Republican vs Democrat, base, Claude judge | 52% vs 53%, p = 0.84 | 28% vs 32%, p = 0.23 |
+| Projection matching: aligned raised to crossed projection (Guard / Claude) | 40 to 42% / 61 to 61%, random same | 18 to 6% / 34 to 18%, random unchanged |
+| Addition: Republican minus Democrat induced refusal, share of the shift | 0.3% | 0.6% |
+| Lakers fan minus voter, did the task, base (Guard) | -11 pts, p = 0.008 | -4 pts, n.s. |
+| cos(alignment direction, refusal direction), chosen layer | 0.60, p < 0.001 | 0.21, n.s. |
+| Shift by the alignment direction, aligned / crossed (Guard) | 40 / 26 to 28 / 39 (swap) | 18 / 10 to 17 / 19 |
+
 ### Main points
 
-1. **No overall party difference** in what either model does at baseline
-   (Democrat vs Republican: p = 0.06 Qwen, p = 0.79 Llama).
-2. **Both models favor your own side's claim.** Aligned requests get done
-   more often than crossed ones in both models, and crossed requests sit
-   closer to refusal on the direction. The effect is modest, roughly a tenth
-   of the full "this is a refusal case" signal.
-3. **One shared direction, not two** (secondary). cos(r_D, r_R) is at least
-   0.987 at every layer, and the D-minus-R gap is within the chance band along
-   the refusal direction at almost every layer.
-4. **Ablation is causal and mostly removes the asymmetry.** It lifts "did the
-   task" to about 80% or more for every identity, leaves benign prompts at 0%, and
-   shrinks the aligned-vs-crossed gap to a few points. With the direction
-   removed, compliance rises with severity.
-5. **The paper's safety judge misses this category.** Llama Guard 2 does not
-   treat election delegitimization as unsafe at all.
+1. **Both models favor your own side's claim**, and it is the robust
+   finding: two judges, two generation runs, within matched pairs.
+2. **Where it lives differs by model.** In Llama the alignment gap runs
+   through the refusal direction: a shift of a fifth of a standard
+   deviation along it flips aligned prompts to crossed behavior, and a
+   random shift does nothing. In Qwen the same-sized shift is inert; the
+   gap is carried by a distinct direction that overlaps refusal by cos 0.6
+   and whose orthogonal part does the work.
+3. **The party-label effects were never about party.** "I'm a Lakers fan"
+   moves Qwen's projection and compliance as much as "I'm a Democrat".
+   Qwen's apparent Republican advantage was judge tilt plus generation noise
+   and does not survive a second judge or a second run.
+4. **The refusal direction is party-blind when added**: it induces refusal
+   for every identity to within 1%.
+5. **One shared direction, not two** (secondary). cos(r_D, r_R) is at least
+   0.987 at every layer.
+6. **Judges disagree on levels, not on comparisons.** Llama Guard 3 misses
+   disclaimer-then-argue replies and most severity-1 content; Claude counts
+   about 20 points more as compliant. Llama Guard 2, the paper's judge,
+   flags nothing.
 
 ### 3B pilot
 
@@ -203,9 +233,9 @@ HANDOFF.md for the file index and formats.
 
 - **Judge:** validated on 3B replies only; over-counts debunking replies as
   compliant; reference labels are AI-written and human-reviewed.
-- **The committed 7B/8B results predate the `fan` identity.** They were made
-  from the first 736 prompts. The fan control and projection matching need
-  one more GPU run.
+- **Greedy decoding is not bit-reproducible across GPUs.** The Oct 28 rerun
+  reproduced 29% (Qwen) and 60% (Llama) of replies exactly, but group rates
+  within 4 points. Compare groups, not individual replies, across runs.
 - **Qwen-7B's baseline is non-monotonic in severity** (34% at level 3 vs 21%
   at level 2). Read those replies before putting severity on a slide.
 - **The "none" baseline differs in wording** from the identity prompts. Use

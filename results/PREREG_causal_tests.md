@@ -119,3 +119,14 @@ Both judges will be run on the patched replies (`guard.py --input` and
 
 A2, B and C are unchanged. B's symmetry prediction is, if anything,
 strengthened: the party gap itself is gone under the Claude judge.
+
+
+---
+
+## Verdicts (2026-10-28)
+
+Results and the verdict table are in `CAUSAL_TESTS.md` section F. Short
+form: A1 held in Qwen (0% closed) and was exceeded in Llama (the gap runs
+through the direction, 150-220% closed, random control 0%); B symmetric to
+under 1% of the induced shift; C failed in Qwen (a Lakers fan is treated like
+a party member); D all held.

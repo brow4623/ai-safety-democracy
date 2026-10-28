@@ -111,7 +111,9 @@ Tensor formats (load with `torch.load`):
 - Candidates: Gemma-2-9B-it (CLAUDE.md's stretch model), or a second Chinese-lab model for the US vs China comparison. Qwen (Alibaba) and Llama (Meta) already make one US/China pair.
 - Watch out: if a model's template puts something after the user turn that `src/model.py` doesn't expect, check `eoi_len` in the run log.
 
-## For Skyler: causal tests not done yet
+## For Skyler: causal tests (done Oct 28, see `results/CAUSAL_TESTS.md`)
+
+All four ran on one pod on Oct 27-28 (under $5) and are scored against `results/PREREG_causal_tests.md`. Headline: the alignment asymmetry runs through the refusal direction in Llama (a 0.14-unit shift flips aligned prompts to crossed behavior) and not in Qwen (a 1.56-unit shift does nothing); in Qwen it is carried by a distinct "alignment direction" (`scripts/alignment_dir.py`, cos 0.6 with refusal) whose orthogonal part does the work. The Lakers-fan control behaves like a party label in Qwen, so the party-label effects are "any group identity" effects; the alignment effect is the only party-specific one. The original list, for the record:
 
 0. **Projection matching** (the TA's test) is the priority: `scripts/patch.py` is written and checked, and it runs as part of `pod_run.sh`. Analyze `results/<model>/patch_<comparison>-guard3-election.jsonl` against the target group's base rate in `guard3-election.jsonl`. **Predictions and pass bars are pre-registered in `results/PREREG_causal_tests.md` (Oct 27); read it before looking at the result.**
 1. **Addition by party.** Code ready: `scripts/add_party.py` (runs in `pod_run.sh` after projection matching; judge its replies with `guard.py --input add_party.jsonl`). Prediction in `results/PREREG_causal_tests.md`.
