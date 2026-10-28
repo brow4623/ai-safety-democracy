@@ -53,16 +53,16 @@
       "usd": 0.13481
     },
     "judge_en": {
-      "calls": 9272,
-      "input_tokens": 8711087,
-      "output_tokens": 573006,
-      "usd": 46.30485
+      "calls": 11818,
+      "input_tokens": 11045187,
+      "output_tokens": 727173,
+      "usd": 58.72475
     },
     "judge_en_recheck": {
-      "calls": 536,
-      "input_tokens": 508493,
-      "output_tokens": 37652,
-      "usd": 1.3936
+      "calls": 672,
+      "input_tokens": 634599,
+      "output_tokens": 46844,
+      "usd": 1.73776
     }
   }
 }
