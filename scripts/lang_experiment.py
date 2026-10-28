@@ -71,17 +71,17 @@ def stage_direction(m, out, args):
     tab = anchor_zh()
 
     # --- English direction at Divya's (layer, pos), her filters and splits.
-    keep_h = [x for x, s in zip(hf_tr, m.refusal_score(hf_tr)) if s > 0]
-    keep_l = [x for x, s in zip(hl_tr, m.refusal_score(hl_tr)) if s < 0]
+    keep_h = [x for x, s in zip(hf_tr, m.refusal_score(hf_tr, lang="en")) if s > 0]
+    keep_l = [x for x, s in zip(hl_tr, m.refusal_score(hl_tr, lang="en")) if s < 0]
     all_h, all_l = layer_means(m, keep_h, pos), layer_means(m, keep_l, pos)   # [L, D]
     dirs_en = all_h - all_l
     d_en = dirs_en[layer]
     base_logp = torch.cat(list(last_logprobs(m, hl_val)))
     with m.ablate(d_en):
-        abl = m.refusal_score(hf_val).mean().item()
+        abl = m.refusal_score(hf_val, lang="en").mean().item()
         logp = torch.cat(list(last_logprobs(m, hl_val)))
     with m.add(d_en, layer):
-        add = m.refusal_score(hl_val).mean().item()
+        add = m.refusal_score(hl_val, lang="en").mean().item()
     kl = (base_logp.exp() * (base_logp - logp)).sum(-1).mean().item()
     res["english"] = {"n_harmful_train": len(keep_h), "n_harmless_train": len(keep_l),
                       "ablate_harmful": abl, "add_harmless": add, "kl_harmless": kl,
@@ -190,7 +190,7 @@ def stage_behavior(m, out, args):
                 res[f"reply_{name}"] = gen_rows(m, df, args.max_new_tokens, llama_zh)
         res[f"cjk_{name}"] = res[f"reply_{name}"].map(cjk_share)
         res[f"ntok_{name}"] = [len(m.tok.encode(x, add_special_tokens=False)) for x in res[f"reply_{name}"]]
-        cap = llama_zh or args.max_new_tokens
+        cap = res.lang.map(lambda lg: llama_zh if (llama_zh and lg.startswith("zh")) else args.max_new_tokens)
         res[f"truncated_{name}"] = res[f"ntok_{name}"] >= cap - 2
     res.to_json(out / "lang_behavior.jsonl", orient="records", lines=True, force_ascii=False)
     print(f"wrote {out / 'lang_behavior.jsonl'}", flush=True)

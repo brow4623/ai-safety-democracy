@@ -237,9 +237,14 @@ def main():
         "detail": f"Qwen china en {pri['en_censored']:.0%} -> zh_s {pri['zh_censored']:.0%}, "
                   f"gap {pri['gap_points']:.0f} points, McNemar p = {pri['p']:.4f}, controls clean = {ctrl_ok}"}
     us = {m: S["tests"].get(f"{m}|us|en_vs_zh_s", {}) for m in MODELS}
+    holm_us = {m: S["tests"]["holm"].get(f"{m}|us|en_vs_zh_s", {}).get("p_holm") for m in us}
+    signs = {m: (t.get("gap_points") or 0) for m, t in us.items() if t}
+    # Pre-registered as "direction reported either way", so there is no pass/fail: report the
+    # sign and whether it survives Holm correction.
     S["verdicts"]["Q2"] = {
-        "pass": all((t.get("gap_points") or 0) < 0 for t in us.values()),
-        "direction": "reverses: both models censor US election prompts LESS in Chinese",
+        "significant_after_holm": {m: bool(p is not None and p < 0.05) for m, p in holm_us.items()},
+        "direction": ("less censored in Chinese" if all(v < 0 for v in signs.values()) else
+                      "more censored in Chinese" if all(v > 0 for v in signs.values()) else "mixed"),
         "detail": {m: f"en {t['en_censored']:.0%} -> zh_s {t['zh_censored']:.0%}, gap {t['gap_points']:+.0f} points, "
                       f"p = {t['p']:.4f} (Holm {S['tests']['holm'].get(f'{m}|us|en_vs_zh_s', {}).get('p_holm'):.3f})"
                    for m, t in us.items() if t}}
@@ -260,6 +265,8 @@ def main():
         if base is None or abs(base) < 15:
             q4[f"{m}|{st}"] = {"evaluated": False, "reason": f"baseline gap {base} points, below the 15-point floor"}
             continue
+        # A negative baseline gap (less censored in Chinese) is outside the pre-registered
+        # hypothesis, so such cells are reported as exploratory and do not decide the verdict.
         abl = entry.get("censored|abl_en", {})
         pm = S["patch"][f"{m}|projection_matching"]["by_comparison"].get(f"zh_to_en|{st}", {})
         q4[f"{m}|{st}"] = {
@@ -270,9 +277,13 @@ def main():
             "hard_refusal_gap": {k.split("|")[1]: v["gap_points"] for k, v in entry.items() if k.startswith("hard_refusal|")},
             "official_line_gap": {k.split("|")[1]: v["gap_points"] for k, v in entry.items() if k.startswith("official_line|")},
             "projection_matching": {k: pm.get(k) for k in ["source_base_censored", "patched_censored", "random_censored"]},
-            "pass": bool(abl.get("gap_vs_base_frac") is not None and abl["gap_vs_base_frac"] <= 0.5)}
+            "exploratory": base < 0,
+            "pass": bool(abl.get("gap_vs_base_frac") is not None and abs(abl["gap_vs_base_frac"]) <= 0.5)}
+    primary = q4.get("Qwen2.5-7B-Instruct|china", {})
     S["verdicts"]["Q4"] = {"by_cell": q4,
-                           "pass": any(v.get("pass") for v in q4.values()),
+                           "pass": bool(primary.get("pass")),
+                           "decided_by": "Qwen2.5-7B-Instruct|china (the pre-registered cell)",
+                           "not_computed": "bootstrap interval of the reduction; random-direction ablation during generation",
                            "note": "A fail means the language gap is NOT carried by the refusal direction."}
 
     S["verdicts"]["Q5"] = {
@@ -283,6 +294,22 @@ def main():
                 "us_election_censored_zh_s": S["rates"].get(f"{m}|base|us|sensitive|zh_s", {}).get("censored")}
             for m in MODELS},
         "note": "Each model is most restrictive about its own country's sensitive topics."}
+
+    # ---- B5: censorship direction (scripts/lang_censordir.py, needs a GPU; read its output here)
+    S["censorship_direction"] = {
+        "source": "scripts/lang_censordir.py (plan step B5)",
+        "definition": "mean over China-set pairs of (zh_s sensitive - en sensitive) - (zh_s control - en control), "
+                      "residual stream at the refusal direction position",
+        "by_model": {}}
+    for m in MODELS:
+        f = ROOT / "results" / m / "lang_censordir.json"
+        if f.exists():
+            c = json.load(open(f))
+            S["censorship_direction"]["by_model"][m] = {
+                **c["chosen_layer"], "n_pairs": c["n_pairs"], "layers": c["layers"],
+                "cos_censor_vs_en_refusal_by_layer": c["cos_censor_vs_en_refusal_by_layer"],
+                "cos_censor_vs_zh_refusal_by_layer": c["cos_censor_vs_zh_refusal_by_layer"],
+                "cos_language_only_vs_en_refusal_by_layer": c["cos_language_only_vs_en_refusal_by_layer"]}
 
     led = json.load(open(OUT / "cost_ledger.json"))
     claude = sum(v["usd"] for v in led["claude"].values())

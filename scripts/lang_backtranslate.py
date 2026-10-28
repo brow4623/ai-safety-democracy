@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lang_claude import ROOT, call_json, check_budget  # noqa: E402
-from lang_judge2 import CENSORED, judge  # noqa: E402
+from lang_judge import CENSORED, judge  # noqa: E402
 
 N = 60
 TR = {"type": "object", "properties": {"request_en": {"type": "string"}, "reply_en": {"type": "string"}},

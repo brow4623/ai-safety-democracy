@@ -46,8 +46,8 @@ def main():
     # Refusal directions at every layer, same procedure as lang_experiment.py stage_direction.
     hf_tr, hl_tr, *_ = anchor_sets(128, 32, 32)
     tab = anchor_zh()
-    keep_h = [x for x, s in zip(hf_tr, m.refusal_score(hf_tr)) if s > 0]
-    keep_l = [x for x, s in zip(hl_tr, m.refusal_score(hl_tr)) if s < 0]
+    keep_h = [x for x, s in zip(hf_tr, m.refusal_score(hf_tr, lang="en")) if s > 0]
+    keep_l = [x for x, s in zip(hl_tr, m.refusal_score(hl_tr, lang="en")) if s < 0]
     dirs_en = layer_means(m, keep_h, pos) - layer_means(m, keep_l, pos)
     hz, lz = zh_of(hf_tr, tab), zh_of(hl_tr, tab)
     keep_hz = [x for x, s in zip(hz, m.refusal_score(hz, lang="zh")) if s > 0]

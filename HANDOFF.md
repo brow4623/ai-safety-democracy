@@ -166,8 +166,8 @@ Predictions were written before the GPU run (`results/PREREG_causal_tests.md`) a
 
 1. **Does projection predict refusal?** Done: `scripts/regress.py`. AUC about 0.8-0.9 in both models. Adding projection does not remove the crossed-vs-aligned term in Qwen; it shrinks it in Llama.
 2. **Addition by party.** Done: `scripts/add_party.py`. The direction induces refusal for every identity (fan included) to within 1% across parties.
-3. **Projection matching.** Divya's constant-shift test, scored under both judges: Llama's 1x shift closes 64-70% of the alignment gap (Claude p = 0.016, Guard p = 0.09); Qwen's closes 5-23%, n.s. The set-to-mean version is confounded (own-mean control). Divya's 2x follow-up (Oct 28): Llama closes 91% of the gap (p = 0.02), random direction flat. Settled.
-4. **Alignment direction** (new, `scripts/alignment_dir.py`, Tyler's censorship-direction construction applied to aligned vs crossed): in Qwen it is stable (split-half cos 0.98), overlaps refusal at cos 0.6 rising to 0.8 by layer 25 (where Michael's curve peaks), and shifting each prompt by it closes the gap under both judges while the refusal-only shift does not. In Llama it is nearly orthogonal to refusal and half-works. `scripts/alignment_decompose.py` splits it into refusal-parallel and orthogonal parts: in Qwen the refusal-parallel part closes the gap and the orthogonal part closes part of it (random same-norm direction does nothing); in Llama only the refusal part does.
+3. **Projection matching.** Divya's constant-shift test, scored under both judges: Llama's 1x shift closes 64-70% of the alignment gap (Claude p = 0.016, Guard p = 0.09); Qwen's closes 5-23%, n.s. The set-to-mean version is confounded (own-mean control). Divya's 2x follow-up (Oct 28): Llama closes 91% of the gap under Guard (p = 0.02) and all of it under Claude (p < 0.001), random direction flat. Settled.
+4. **Alignment direction** (new, `scripts/alignment_dir.py`, Tyler's censorship-direction construction applied to aligned vs crossed): in Qwen it is stable (split-half cos 0.98), overlaps refusal at cos 0.6 rising to 0.8 by layer 25 (where Michael's curve peaks), and shifting each prompt by it closes the gap under both judges while the 1x refusal-only shift does not. In Llama it is nearly orthogonal to refusal and half-works. `scripts/alignment_decompose.py` splits it into refusal-parallel and orthogonal parts: in Qwen the refusal-parallel part closes the gap and the orthogonal part closes part of it (random same-norm direction does nothing); in Llama only the refusal part does.
 5. **Ablation by layer** at Michael's layers (19 Qwen, 11 Llama): not run.
 
 ## Known issues
@@ -188,3 +188,78 @@ uv run python scripts/guard.py --results Qwen2.5-7B-Instruct --guard meta-llama/
 uv run python scripts/patch.py --model Qwen/Qwen2.5-7B-Instruct
 uv run python scripts/headline.py Qwen2.5-7B-Instruct
 ```
+
+---
+
+# Extension: language and censorship (Oct 27, Tyler)
+
+Does asking in Chinese instead of English change what a model refuses, and is that change carried by Divya's refusal direction? Run on Qwen2.5-7B-Instruct and Llama-3.1-8B-Instruct. Report: `reports/language_censorship.html` (also published as a private page; ask Tyler for the link).
+
+## Headline results
+
+| Question | Result |
+|---|---|
+| Q1. Does Chinese increase censorship of CCP-sensitive topics? | **Yes, Qwen.** 21% censored in English vs 62% in Simplified Chinese (24 matched pairs, McNemar p = 0.002). Traditional Chinese is the same (62%), so it is the language, not the script. Controls clean. |
+| Q2. Does language change behavior on the team's US stolen-election prompts? | **Reverses, exploratory.** Both models censor *less* in Chinese: Qwen 19% → 4%, Llama 69% → 52%. Neither survives Holm correction (0.131, 0.116). |
+| Q3. Is the refusal direction the same in both languages? | **Yes.** cos(English, Chinese) = 0.978 (Qwen), 0.908 (Llama); ablating either direction drops refusal on harmful prompts to 0% in both languages. Divya's directions reproduced within tolerance. |
+| Q4. Does removing the direction close the language gap? | **No for Qwen on China topics (the main finding).** The gap goes from 42 to 46 points after ablation. Most of it is official-line answers (29 of 42 points), which ablation leaves unchanged; projection matching agrees. **Yes for Llama on US elections, with caveats**: the gap goes from −17 to +4 points, mostly because ablation removes nearly all refusals, and raising projections increases refusal (52% → 81%, random direction 33%). Two of the pre-registered Q4 checks (bootstrap interval, five random directions) were not computed for the ablation runs. |
+| Q5. Do models differ? | **Each model guards its own country.** Qwen censors 62% of China-sensitive prompts in Chinese, Llama 0% in every language. Llama refuses 69% of US election prompts in English, Qwen 19%. |
+
+Plan step B5, the "censorship direction" (what Chinese adds on sensitive prompts beyond what it adds on controls): in Qwen it points partly along the refusal direction (cosine 0.65, shuffle-test p = 0.02, about 14% of the refusal direction's size); in Llama it does not (0.08, p = 0.51). So Qwen registers "sensitive in Chinese" on its refusal axis, but removing that axis does not stop the official-line answers. Results: `results/<model>/lang_censordir.json`, script `scripts/lang_censordir.py`.
+
+Takeaway: the refusal direction controls genuine refusal in both languages, but Qwen's Chinese-language censorship is mostly state-aligned framing that does not run through it. An English refusal audit would miss it.
+
+"Censored" = official line + dodges + refuses. On election prompts, pushback against the false claim is counted separately and never as censorship.
+
+## Files
+
+| Path | What it is |
+|---|---|
+| `src/lang_prompts.py`, `scripts/lang_build_prompts.py` | China set (12 topics × question/writing × sensitive/control × en/zh_s/zh_t) and the combined set |
+| `data/lang_experiment_prompts.jsonl` | All 278 prompts per model (`pair` links a prompt to its control and translations) |
+| `data/lang_us_zh.json`, `data/lang_anchor_zh.json` | Chinese translations of the election prompts and of Divya's harmful/harmless anchor prompts (11 harmful anchors from MultiJail, marked `source: "multijail"`) |
+| `scripts/lang_pod_run.sh`, `scripts/lang_experiment.py` | GPU side: directions, behavior (base, English ablation, Chinese ablation for Qwen), projection matching |
+| `scripts/lang_translate.py`, `lang_judge.py`, `lang_backtranslate.py`, `lang_examples.py`, `lang_claude.py` | Claude API side: translation, judge (two rubrics), judge-bias check, example glosses, cost ledger |
+| `scripts/lang_analyze.py` | Pre-registered tests and every report number → `results/lang_experiment/summary.json`, `examples.json` |
+| `results/<model>/lang_behavior.jsonl`, `lang_labels.jsonl`, `lang_patch.jsonl`, `lang_direction.json` | Replies, judge labels, projection-matching replies, direction verification and cosine by layer |
+| `results/lang_experiment/` | Summary, examples, back-translation check, cost ledger (pod logs are kept locally in `pod_logs/`, not in git) |
+| `scripts/ccp_pilot.py`, `lang_pilot_run.py`, `lang_pilot_judge.py`, `data/lang_prompts.jsonl`, `results/Qwen2.5-7B-Instruct/ccp_pilot.jsonl`, `lang_test.jsonl`, `lang_judged.jsonl` | The two earlier pilots (superseded; kept as a record) |
+
+`src/model.py` gained Chinese refusal tokens and phrases (the original refusal score only recognized English).
+
+## Rerun
+
+```bash
+# Mac: translations (Claude API)
+ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_translate.py
+uv run python scripts/lang_build_prompts.py
+# GPU pod (one H100, ~35 min for both models). Needs Divya's results/<model>/direction.json and
+# direction_stability.json, which are in git; writes the .pt direction files it reuses.
+nohup bash scripts/lang_pod_run.sh > /workspace/logs/lang.log 2>&1 &
+# Mac: judge, checks, analysis
+ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_judge.py Qwen2.5-7B-Instruct Llama-3.1-8B-Instruct
+ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_backtranslate.py
+uv run python scripts/lang_analyze.py
+ANTHROPIC_API_KEY=... uv run --no-project --with anthropic python scripts/lang_examples.py
+```
+
+Cost of the full run: $21.31 (RunPod $2.40, Claude API $14.91, pilots $4).
+
+## Judge
+
+Claude Opus 5.5 sees only the request and reply (not model, language or condition). Checks: a 10% re-score by Claude Sonnet 5.5 agreed 94% (Qwen) and 98% (Llama); 60 Chinese replies back-translated to English and re-judged blind agreed 95% exactly, 98% on censored vs not. 15 of 1,966 replies (all pipe-bomb sanity checks) could not be judged because Claude's safety filter declined; a keyword check shows both models refused them.
+
+## Caveats
+
+- Translations are by Claude with no native-speaker check; translation, register and language are confounded.
+- Small sample: 12 China topics (planned 20; drafting the 8 extra topics was interrupted by a safety filter, so the validated set was kept), so the effective n is about 12. The US set is 8 elections.
+- The Chinese refusal direction ablates well but barely induces refusal when added (0.12 vs 5.14 for English).
+- Most replies are cut off at the token cap (300 tokens; 400 for Llama in Chinese): Qwen 44–68% depending on language, Llama 51% in English and 45–50% in Chinese. The judge was told to label where a reply is heading.
+- Greedy decoding, one sample per prompt, 7–8B models only. A null for ablation means the gap is not carried by this one direction, not that it has no mechanism.
+
+## Ideas for the next group
+
+1. Native-speaker check of translations and a sample of judge labels.
+2. Find what does carry the official-line behavior: build a direction from official-line vs factual Chinese replies and test it causally.
+3. More China topics (the planned 20) and a second Chinese-lab model to separate Qwen from Chinese labs in general.
+4. Follow up the Q2 reversal (less censorship of US election claims in Chinese) with more prompts.
