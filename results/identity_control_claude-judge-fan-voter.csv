@@ -1,0 +1,13 @@
+model,kind,identity,measure,n_pairs,identity_rate,voter_rate,diff,p
+Qwen2.5-7B-Instruct,stolen,fan,did_task_base,136,0.47058823529411764,0.5882352941176471,-0.11764705882352944,0.002493917942047119
+Qwen2.5-7B-Instruct,stolen,fan,did_task_ablated,136,0.8823529411764706,0.9558823529411765,-0.07352941176470595,0.00634765625
+Qwen2.5-7B-Instruct,stolen,fan,projection,136,12.367309731058825,11.943004892647059,0.4243048384117647,0.1143
+Qwen2.5-7B-Instruct,benign,fan,did_task_base,48,1.0,1.0,0.0,1.0
+Qwen2.5-7B-Instruct,benign,fan,did_task_ablated,48,1.0,1.0,0.0,1.0
+Qwen2.5-7B-Instruct,benign,fan,projection,48,-0.29489368916666664,-3.5017831612499997,3.2068894720833327,0.0
+Llama-3.1-8B-Instruct,stolen,fan,did_task_base,136,0.19117647058823528,0.3161764705882353,-0.125,0.00022125244140625
+Llama-3.1-8B-Instruct,stolen,fan,did_task_ablated,136,0.8970588235294118,0.9264705882352942,-0.02941176470588236,0.3876953125
+Llama-3.1-8B-Instruct,stolen,fan,projection,136,2.878781873529412,2.667603304411765,0.21117856911764704,0.0
+Llama-3.1-8B-Instruct,benign,fan,did_task_base,48,1.0,1.0,0.0,1.0
+Llama-3.1-8B-Instruct,benign,fan,did_task_ablated,48,1.0,1.0,0.0,1.0
+Llama-3.1-8B-Instruct,benign,fan,projection,48,1.2004185525000002,0.6295970569583333,0.5708214955416667,0.0

@@ -169,9 +169,9 @@ Arizona 2022) 47% of the time, a Democrat with the same request 24%.
 | Republican vs Democrat, base, Claude judge | 52% vs 53%, p = 0.84 | 28% vs 32%, p = 0.23 |
 | Projection matching: aligned raised to crossed projection (Guard / Claude) | 40 to 42% / 61 to 61%, random same | 18 to 6% / 34 to 18%, random unchanged |
 | Addition: Republican minus Democrat induced refusal, share of the shift | 0.3% | 0.6% |
-| Lakers fan minus voter, did the task, base (Guard) | -11 pts, p = 0.008 | -4 pts, n.s. |
+| Lakers fan minus voter, did the task, base (Guard / Claude) | -11 / -12 pts, p < 0.01 | -4 n.s. / -12 pts, p < 0.001 |
 | cos(alignment direction, refusal direction), chosen layer | 0.60, p < 0.001 | 0.21, n.s. |
-| Shift by the alignment direction, aligned / crossed (Guard) | 40 / 26 to 28 / 39 (swap) | 18 / 10 to 17 / 19 |
+| Shift by the alignment direction, aligned / crossed (Guard; Claude) | 40 / 26 to 28 / 39; 60 / 47 to 52 / 52 | 18 / 10 to 17 / 19; 34 / 27 to 35 / 36 |
 
 ### Main points
 
@@ -184,9 +184,10 @@ Arizona 2022) 47% of the time, a Democrat with the same request 24%.
    gap is carried by a distinct direction that overlaps refusal by cos 0.6
    and whose orthogonal part does the work.
 3. **The party-label effects were never about party.** "I'm a Lakers fan"
-   moves Qwen's projection and compliance as much as "I'm a Democrat".
-   Qwen's apparent Republican advantage was judge tilt plus generation noise
-   and does not survive a second judge or a second run.
+   lowers compliance by 12 points in both models, as much as or more than
+   "I'm a Democrat", and moves the projection as much. Qwen's apparent
+   Republican advantage was judge tilt plus generation noise and does not
+   survive a second judge or a second run.
 4. **The refusal direction is party-blind when added**: it induces refusal
    for every identity to within 1%.
 5. **One shared direction, not two** (secondary). cos(r_D, r_R) is at least

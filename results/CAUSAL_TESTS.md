@@ -178,7 +178,7 @@ judge.
 | A1 Llama: (amended) about 40% closed under Claude | **Exceeded.** 220% under Claude, 150% under Guard; random control 0%. The gap runs through the direction. |
 | A2: party matching moves Democrats toward refusal by < 5 points | Qwen: moved the other way, n.s. Llama: moved toward refusal by 13-15 points, overshooting Republicans. **Llama fails the "small" prediction in the informative direction.** |
 | B: induced refusal symmetric, < 10% of rise, p > 0.05 | **Magnitude held** (< 1%); p-value bar failed in Llama at coeff 1 and Qwen at coeff 2. |
-| C: fan within 5 points of voter | **Failed in Qwen** (-11, p = 0.008); held in Llama (-4, n.s.). |
+| C: fan within 5 points of voter | **Failed in both models** under Claude (-12 in each, p < 0.01); under Guard failed in Qwen (-11) and held in Llama (-4, n.s.). |
 | D1-D4: second judge | All held (NO_GPU_FOLLOWUPS.md section 4). |
 
 ## What this means for the headline
@@ -190,10 +190,11 @@ judge.
    behavior. In Qwen the refusal direction is inert for this, and the gap
    is carried by a distinct direction that overlaps refusal by cos 0.6 and
    whose orthogonal part does the work.
-3. **The party-label effects were never about party.** A Lakers fan gets
-   the same treatment as a Democrat or a Republican in Qwen, in projection
-   and in behavior. Qwen's apparent Republican advantage was judge tilt plus
-   generation noise.
+3. **The party-label effects were never about party.** A Lakers fan is
+   helped 12 points less than a plain voter in both models, as much as or
+   more than a party label, and sits as high on the refusal direction.
+   Qwen's apparent Republican advantage was judge tilt plus generation
+   noise.
 4. **The refusal direction treats both parties alike** when added: it
    induces refusal for everyone, to within 1%.
 
@@ -208,9 +209,40 @@ judge.
   one script change and ten minutes on a pod, and it would turn "inferred"
   into "shown".
 - Guard 2 was skipped (no access); it flags nothing in this task.
-- Section G below depends on the Claude judge for the fan rows and the
-  alignment-direction replies.
 
 ## G. Claude judge on the alignment-direction replies and the fan control
 
-PENDING
+Opus-vs-Sonnet did-the-task agreement on the rechecks: 142 of 146 on the
+alignment replies, 68 of 72 on the fan/voter rows.
+
+**Alignment-direction shift, Claude judge** (aligned / crossed, did the
+task; McNemar for shift vs base within group):
+
+| | base | shift (+a to aligned, -a to crossed) | a projected out | random projected out |
+|---|---|---|---|---|
+| Qwen | 60% / 47% | **52% / 52%** (aligned down, p = 0.02; crossed up, p = 0.23) | 93% / 90% | 60% / 50% |
+| Llama | 34% / 27% | **35% / 36%** (aligned flat; crossed up, p < 0.001) | 33% / 28% | 33% / 25% |
+
+Under Claude the Qwen shift closes the 13-point gap to zero rather than
+reversing it as under Guard, and the Llama shift closes the 7-point gap by
+raising crossed prompts only. Both judges agree on the shape: in Qwen the
+alignment direction moves both groups, in Llama it moves crossed prompts
+up and leaves aligned prompts alone. Benign prompts stay at 98-100% under
+every condition, so the shift is not a general refusal or compliance knob.
+
+**Fan vs voter, Claude judge** (new replies, matched pairs):
+
+| | Qwen | Llama |
+|---|---|---|
+| fan minus voter, did the task, base | **-12 pts, p = 0.002** | **-12 pts, p < 0.001** |
+| fan minus voter, ablated | -7 pts, p = 0.006 | -3 pts, n.s. |
+| benign, any condition | 0 | 0 |
+
+The Claude judge confirms Qwen's fan penalty and finds the same size in
+Llama, where Guard had it at -4 and n.s. For comparison, under Claude on
+the Oct 25 replies, Democrat and Republican askers sat 7-8 points below
+voter in Qwen and within 3 points of voter in Llama. So "I'm a Lakers fan"
+lowers compliance at least as much as a party label in both models, and in
+Llama more. Prediction C fails in both models under the better judge. The
+party labels carry no penalty beyond what any stated group identity
+carries; what party carries is the alignment effect.
