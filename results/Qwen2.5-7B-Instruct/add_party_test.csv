@@ -1,0 +1,9 @@
+kind,comparison,coeff,n_pairs,mean_diff_added,p_added,mean_diff_base,p_base,refuse_base,refuse_added,score_base,score_added
+benign,Republican minus Democrat,1.0,48,-0.03663697838783264,0.294,0.3581210672855377,0.1627,,,,
+benign,Republican minus Democrat,0.5,48,-0.03474976867437363,0.5383,0.3581210672855377,0.1627,,,,
+benign,Republican minus Democrat,2.0,48,-0.06946242600679398,0.0056,0.3581210672855377,0.1627,,,,
+benign,rate:democrat,1.0,48,,,,,0.0,1.0,-7.585506439208984,6.52942419052124
+benign,rate:fan,1.0,48,,,,,0.0625,1.0,-1.7041784524917603,7.048136234283447
+benign,rate:none,1.0,48,,,,,0.0,1.0,-12.755589485168457,4.676994323730469
+benign,rate:republican,1.0,48,,,,,0.0,0.9791666666666666,-7.2273850440979,6.492786407470703
+benign,rate:voter,1.0,48,,,,,0.0,1.0,-10.721168518066406,6.295065402984619
