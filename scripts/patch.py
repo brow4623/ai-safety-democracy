@@ -19,8 +19,20 @@ Then judge the replies (guard.py --input patch_<comparison>.jsonl) and compare
 the source's patched rate with the target's base rate. If they match, the gap
 runs through the refusal direction; if not, it comes from somewhere else.
 
-Writes results/<model>/patch_<comparison>.jsonl with reply_base (the source
-prompt's original reply), reply_patched and reply_random.
+Modes (--mode), to separate "closes the gap" from "squeezes every prompt to
+one value":
+  set    each source prompt's projection set to the target mean (the test above)
+  own    each source prompt's projection set to its OWN group's mean. The
+         group mean doesn't move, so any behavior change comes from removing
+         the spread across prompts, not from the gap. Control for "set".
+  shift  every source prompt shifted by the same amount, --scale times the
+         gap between group means. Keeps each prompt's place in the spread.
+         With --scale 1 the group mean lands on the target's; 3 and 10 are
+         the dose check.
+
+Writes results/<model>/patch_<comparison>.jsonl ("set") or
+patch_<comparison>_<mode><scale>.jsonl with reply_base (the source prompt's
+original reply), reply_patched, and reply_random (only with --random).
 
 Usage:
   uv run python scripts/patch.py --model Qwen/Qwen2.5-7B-Instruct
@@ -85,6 +97,10 @@ def main():
     ap.add_argument("--comparisons", nargs="+", default=list(COMPARISONS), choices=list(COMPARISONS))
     ap.add_argument("--max-new-tokens", type=int, default=128)
     ap.add_argument("--limit", type=int, default=0, help="source prompts per comparison, 0 = all (for testing)")
+    ap.add_argument("--mode", choices=["set", "own", "shift"], default="set")
+    ap.add_argument("--scale", type=float, default=1.0, help="shift mode: multiple of the group-mean gap")
+    ap.add_argument("--random", action=argparse.BooleanOptionalAction, default=None,
+                    help="also run the random-direction control (default: only in set mode)")
     args = ap.parse_args()
 
     out = ROOT / "results" / args.model.split("/")[-1]
@@ -110,9 +126,14 @@ def main():
         src = st[st[col] == source]
         if args.limit:
             src = src.head(args.limit)
-        deltas = (mean[target] - src.proj).tolist()
-        print(f"{name}: raise {source} (mean {mean[source]:.3f}) to {target} (mean {mean[target]:.3f}), "
-              f"{len(src)} prompts, mean shift {sum(deltas) / len(deltas):.3f}")
+        if args.mode == "set":
+            deltas = (mean[target] - src.proj).tolist()
+        elif args.mode == "own":
+            deltas = (mean[source] - src.proj).tolist()
+        else:
+            deltas = [args.scale * (mean[target] - mean[source])] * len(src)
+        print(f"{name} [{args.mode} x{args.scale:g}]: {source} (mean {mean[source]:.3f}) vs {target} "
+              f"(mean {mean[target]:.3f}), {len(src)} prompts, mean shift {sum(deltas) / len(deltas):.3f}")
 
         res = prompts.loc[src.index].reset_index()
         res["comparison"], res["source"], res["target"] = name, source, target
@@ -121,8 +142,11 @@ def main():
         res["reply_base"] = base.loc[src.index, "reply_base"].values
         instr = res.instruction.tolist()
         res["reply_patched"] = generate_shifted(m, instr, deltas, unit, layer, args.max_new_tokens)
-        res["reply_random"] = generate_shifted(m, instr, deltas, rand, layer, args.max_new_tokens)
-        res.to_json(out / f"patch_{name}.jsonl", orient="records", lines=True)
+        res["mode"], res["scale"] = args.mode, args.scale
+        if args.random if args.random is not None else args.mode == "set":
+            res["reply_random"] = generate_shifted(m, instr, deltas, rand, layer, args.max_new_tokens)
+        suffix = "" if args.mode == "set" else f"_{args.mode}{args.scale:g}"
+        res.to_json(out / f"patch_{name}{suffix}.jsonl", orient="records", lines=True)
 
 
 if __name__ == "__main__":
