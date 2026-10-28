@@ -205,11 +205,14 @@ replies.
    robust**: two judges, two generation runs, within-pair.
 2. **Where it lives differs by model.** In Llama the refusal direction
    plausibly carries most of the gap: a constant shift by the measured gap
-   closes about 70% of it. In Qwen the same test closes a fifth at most,
-   and the gap is carried by a distinct alignment direction that overlaps
-   refusal by cos 0.6 and whose orthogonal part does the work. The
-   direction controls compliance in both models (dose series), but only in
-   Llama does the *measured* gap-sized shift do gap-sized work.
+   closes about 70% of it, and the decomposition shows only the refusal
+   component of the alignment direction moves the gap. In Qwen the same
+   1x test closes a fifth at most; the gap is carried by an alignment
+   direction that overlaps refusal by cos 0.6, and *both* its refusal
+   component and its orthogonal component close the gap on their own (H),
+   with a same-size random direction doing nothing. The refusal direction
+   controls compliance in both models (dose series), but only in Llama
+   does the measured gap-sized shift do gap-sized work.
 3. **The party-label effects were never about party.** A Lakers fan is
    helped 12 points less than a plain voter in both models, as much as or
    more than a party label, and sits as high on the refusal direction.
@@ -227,10 +230,9 @@ replies.
 - Llama's 64-70% in A is from 136 prompts; Divya's suggested 2x shift (or
   more prompts) would settle whether the direction carries most or all of
   Llama's gap.
-- The decomposition the Qwen result implies, shifting by a's component
-  orthogonal to refusal vs its parallel component, has not been run. It is
-  one script change and ten minutes on a pod, and it would turn "inferred"
-  into "shown".
+- The decomposition (H) uses a bidirectional shift, so its dose is about
+  2.6x the measured gap; a 1x version of the par/perp split would match
+  Divya's clean test exactly.
 - Guard 2 was skipped (no access); it flags nothing in this task.
 
 ## G. Claude judge on the alignment-direction replies and the fan control
@@ -269,3 +271,47 @@ lowers compliance at least as much as a party label in both models, and in
 Llama more. Prediction C fails in both models under the better judge. The
 party labels carry no penalty beyond what any stated group identity
 carries; what party carries is the alignment effect.
+
+## H. Decomposing the alignment direction (`alignment_decompose.py`)
+
+Section D inferred that the part of Qwen's alignment direction a
+orthogonal to the refusal direction does the work. This tests it: aligned
+prompts get +v and crossed prompts -v at the chosen layer, for v = a's
+component along the unit refusal direction (par), its orthogonal component
+(perp), a itself (full), and a random direction of the same norm as a,
+orthogonal to both (rand). Note the relative dose between the groups is
+2|v|, so the par condition is a shift of about 2.6x the measured
+aligned-crossed projection gap in both models, comparable to Divya's 3x
+constant shift, not her 1x.
+
+| | Qwen | Llama |
+|---|---|---|
+| norm of a / par / perp | 3.37 / 2.03 / 2.69 | 0.90 / 0.19 / 0.88 |
+
+"Did the task", aligned / crossed, and the resulting gap (Guard judge;
+Claude judge in the row below each where available):
+
+| Condition | Qwen aligned / crossed | Qwen gap | Llama aligned / crossed | Llama gap |
+|---|---|---|---|---|
+| base | 40% / 26% | +14 | 18% / 10% | +8 |
+| par: refusal component only | 35% / 34% | **+1** | 13% / 17% | **-4** |
+| perp: orthogonal component only | 35% / 36% | **-1** | 27% / 14% | +13 |
+| full: a | 28% / 39% | -11 | 17% / 19% | -2 |
+| rand: same norm, random | 40% / 27% | +13 | 15% / 15% | +1 |
+
+- **Qwen: both components are causally active and they add.** The refusal
+  component alone closes the gap (at a 2.6x dose, consistent with Divya's
+  3x shift closing 63%); the orthogonal component alone also closes it,
+  while a random direction of the same size does nothing, so it is a real
+  direction, not a perturbation effect. Together they reverse the gap.
+  The section-D inference is half right: the orthogonal part does
+  gap-sized work on its own, but so does the parallel part at this dose.
+- **Llama: only the refusal component carries the gap.** The orthogonal
+  component raises compliance in both groups whichever way it is applied
+  (aligned 18 to 27, crossed 10 to 14), which is an off-direction
+  perturbation, not alignment. The gap lives on the refusal direction, as
+  A found.
+- **Model split, restated.** Llama encodes "the other side's claim" as
+  more refusal-like, full stop. Qwen encodes it as more refusal-like *and*
+  along a second direction that the refusal direction does not see, and
+  either part suffices to move behavior at this dose.
