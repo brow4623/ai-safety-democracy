@@ -63,6 +63,11 @@ for m in "${MODELS[@]}"; do
   step "align-dir-${m##*/}" uv run python scripts/alignment_dir.py --model "$m"
   step "align-dir-judge-${m##*/}" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
     --input "alignment_dir.jsonl"
+  # 8. Decompose the alignment direction into its refusal-parallel and
+  # orthogonal parts and shift by each (plus a random same-norm control).
+  step "align-decompose-${m##*/}" uv run python scripts/alignment_decompose.py --model "$m"
+  step "align-decompose-judge-${m##*/}" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
+    --input "alignment_decompose.jsonl"
 done
 
 echo "== ALL DONE $(date -u +%H:%M:%S)"
