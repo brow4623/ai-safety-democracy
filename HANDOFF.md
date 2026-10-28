@@ -160,19 +160,22 @@ Tensor formats (load with `torch.load`):
 - Candidates: Gemma-2-9B-it (CLAUDE.md's stretch model), or a second Chinese-lab model for the US vs China comparison. Qwen (Alibaba) and Llama (Meta) already make one US/China pair.
 - Watch out: if a model's template puts something after the user turn that `src/model.py` doesn't expect, check `eoi_len` in the run log.
 
-## For Skyler: causal tests
+## For Skyler: causal tests (done Oct 27-28; results in `results/CAUSAL_TESTS.md`)
 
-1. **Does projection predict refusal?** (no GPU) Logistic regression of the judge's "did the task" on each prompt's projection (`geometry_per_prompt.csv` joined to `guard3-election.jsonl` on `id`), with party, alignment and severity terms.
-2. **Addition by party.** (GPU) Add the direction (`Model.add` in `src/model.py`) to the benign election questions and check whether it induces refusal equally for Democrat and Republican askers.
-3. **Projection matching follow-up:** the 1x shift in Llama closes ~64% of the gap but isn't significant at 136 prompts; more prompts or a 2x shift would settle it.
-4. **Ablation by layer** for the alignment gap. Michael's curves say where: the gap switches on at layer 19 in Qwen (flat through 17) and at layer 11 in Llama (peak at 18), so compare ablating only before vs only from those layers.
+Predictions were written before the GPU run (`results/PREREG_causal_tests.md`) and every test is scored against them. Everything below is judged with Llama Guard 3 + election and with a second judge, Claude on Tyler's US rubric (`scripts/judge_claude.py`; `headline.py --judge claude-judge`), validated by a blind human pass at kappa 0.77 (`validation/RESULTS.md`).
+
+1. **Does projection predict refusal?** Done: `scripts/regress.py`. AUC about 0.8-0.9 in both models. Adding projection does not remove the crossed-vs-aligned term in Qwen; it shrinks it in Llama.
+2. **Addition by party.** Done: `scripts/add_party.py`. The direction induces refusal for every identity (fan included) to within 1% across parties.
+3. **Projection matching.** Divya's constant-shift test, scored under both judges: Llama's 1x shift closes 64-70% of the alignment gap (Claude p = 0.016, Guard p = 0.09); Qwen's closes 5-23%, n.s. The set-to-mean version is confounded (own-mean control). Divya's 2x follow-up (Oct 28): Llama closes 91% of the gap under Guard (p = 0.02) and all of it under Claude (p < 0.001), random direction flat. Settled.
+4. **Alignment direction** (new, `scripts/alignment_dir.py`, Tyler's censorship-direction construction applied to aligned vs crossed): in Qwen it is stable (split-half cos 0.98), overlaps refusal at cos 0.6 rising to 0.8 by layer 25 (where Michael's curve peaks), and shifting each prompt by it closes the gap under both judges while the 1x refusal-only shift does not. In Llama it is nearly orthogonal to refusal and half-works. `scripts/alignment_decompose.py` splits it into refusal-parallel and orthogonal parts: in Qwen the refusal-parallel part closes the gap and the orthogonal part closes part of it (random same-norm direction does nothing); in Llama only the refusal part does.
+5. **Ablation by layer** at Michael's layers (19 Qwen, 11 Llama): not run.
 
 ## Known issues
 
-- Judge limits above (high absolute rates; validated on 3B only; AI labels reviewed by a human).
-- Qwen-7B baseline helps more with severity 3 (33%) than severity 2 (22%). Worth reading those replies before putting severity on a slide.
+- Judge limits above. Update Oct 28: a blind human pass on 50 7B/8B replies gives kappa 0.77 for the Claude judge and 0.51 for Llama Guard (`validation/RESULTS.md`); Guard misses disclaimer-then-argue and severity-1 replies, so its severity-1 rates are undercounts.
+- Qwen-7B baseline helps more with severity 3 (33%) than severity 2 (22%). Read (Oct 26): a request-format effect (letters and speeches get drafted, "evidence" and "persuasive post" requests get refused), not severity; see `results/NO_GPU_FOLLOWUPS.md`.
 - The "none" identity uses "Please" in both phrasings while the others alternate. Use "voter" or "fan" as the no-party baseline.
-- The second run regenerated all replies; rates differ from the first run by a point or two (generation is not bit-identical across runs). Conclusions didn't change. `guard2*` and plain `guard3*` files are from the first run (736 prompts).
+- The second run regenerated all replies; rates differ from the first run by a point or two (the 736- vs 920-prompt batch changes the numerics; the Oct 28 pod run reproduced the second run byte for byte). Conclusions didn't change, except Qwen's Republican-vs-Democrat gap (p = 0.06 in the first run) which does not reproduce and vanishes under the Claude judge. `guard2*` and plain `guard3*` files are from the first run (736 prompts).
 - The 3B pilot used Sreya's 384 prompts and the old extraction (validation set reused for the sanity check, Qwen-3B KL relaxed to 0.5). Its files are kept as they were, apart from re-grading.
 
 ## Rerun from scratch

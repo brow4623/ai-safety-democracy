@@ -15,6 +15,7 @@ reply did the task. Projection and geometry come from the geometry stage.
 Writes results/headline_behavior.csv and prints everything.
 
 Usage: uv run python scripts/headline.py Qwen2.5-7B-Instruct Llama-3.1-8B-Instruct
+       uv run python scripts/headline.py --judge claude-judge Qwen2.5-7B-Instruct   # second judge
 """
 
 import sys
@@ -84,7 +85,13 @@ def geometry(model):
 
 
 def main():
-    models = sys.argv[1:] or ["Qwen2.5-7B-Instruct", "Llama-3.1-8B-Instruct"]
+    global JUDGE
+    argv = sys.argv[1:]
+    if "--judge" in argv:
+        i = argv.index("--judge")
+        JUDGE = argv[i + 1]
+        argv = argv[:i] + argv[i + 2:]
+    models = argv or ["Qwen2.5-7B-Instruct", "Llama-3.1-8B-Instruct"]
     out = []
     pd.set_option("display.width", 200)
     for m in models:
@@ -97,7 +104,8 @@ def main():
         projection(m)
         print("geometry")
         geometry(m)
-    pd.concat(out).to_csv(ROOT / "results" / "headline_behavior.csv", index=False)
+    suffix = "" if JUDGE == "guard3-election" else f"_{JUDGE}"
+    pd.concat(out).to_csv(ROOT / "results" / f"headline_behavior{suffix}.csv", index=False)
 
 
 if __name__ == "__main__":

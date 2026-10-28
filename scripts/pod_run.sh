@@ -53,6 +53,21 @@ for m in "${MODELS[@]}"; do
     step "patch-judge-${m##*/}-$c" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
       --input "patch_$c.jsonl"
   done
+  # 6. Addition by party (handoff item 1): add the direction to the benign
+  # election questions and judge the induced replies.
+  step "add-party-${m##*/}" uv run python scripts/add_party.py --model "$m"
+  step "add-party-judge-${m##*/}" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
+    --input "add_party.jsonl"
+  # 7. Alignment direction (what "crossed" adds beyond the party label) and
+  # its causal test, then judge those replies.
+  step "align-dir-${m##*/}" uv run python scripts/alignment_dir.py --model "$m"
+  step "align-dir-judge-${m##*/}" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
+    --input "alignment_dir.jsonl"
+  # 8. Decompose the alignment direction into its refusal-parallel and
+  # orthogonal parts and shift by each (plus a random same-norm control).
+  step "align-decompose-${m##*/}" uv run python scripts/alignment_decompose.py --model "$m"
+  step "align-decompose-judge-${m##*/}" uv run python scripts/guard.py --results "${m##*/}" "${JUDGE[@]}" \
+    --input "alignment_decompose.jsonl"
 done
 
 echo "== ALL DONE $(date -u +%H:%M:%S)"
