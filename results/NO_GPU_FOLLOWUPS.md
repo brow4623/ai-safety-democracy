@@ -177,10 +177,8 @@ before any GPU output exists: the point expectation is now 20% (Qwen) to
 40% (Llama) closed, judged with Claude; the pass bar for "runs through the
 direction" stays at 50%.
 
-**Caveat on the blind-label check.** The Claude judge agrees with the 50
-blind rubric labels from section 3 on 50 of 50 rows (Guard: 69%). That is
-not independent validation: those labels were also written by a Claude
-model from the same rubric. It shows the judge applies the rubric the way
-the rubric's author intended, not that the rubric is right. The human pass
-over `validation/to_label_7b8b/Claude.csv` is still the thing that would
-settle it.
+**Blind-label check.** The Claude judge agrees with the 50 Claude-written
+rubric labels from section 3 on 50 of 50 rows, which is not independent.
+The independent check came Oct 28: Skyler labeled the same 50 rows blind
+and agrees with the Claude judge on 40 of 45 stolen rows, kappa 0.77 (with
+Guard: 34 of 45, kappa 0.51). Details in `validation/RESULTS.md`.

@@ -4,7 +4,9 @@ GPU run on one pod (Qwen2.5-7B-Instruct and Llama-3.1-8B-Instruct, about
 50 minutes plus 25 for the alignment direction), under $5. Every reply was
 regenerated, so the fan identity is in all files. Judged with Llama Guard 3
 + election category (Guard) on the pod and with the Claude judge (Claude,
-`scripts/judge_claude.py`) on a Mac. Predictions and pass bars are in
+`scripts/judge_claude.py`) on a Mac. Both judges are validated against a
+blind human pass on 50 7B/8B replies: Claude kappa 0.77, Guard 0.51
+(`validation/RESULTS.md`). Predictions and pass bars are in
 `PREREG_causal_tests.md`; the verdict table is at the end.
 
 Scripts: `patch_analyze.py`, `identity_control.py`, `add_party.py`'s

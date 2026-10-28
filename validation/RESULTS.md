@@ -104,3 +104,33 @@ nearly all disclaimer-then-argue replies that Guard's election category
 misses, and it doubles the severity-1 rates. The alignment effect holds
 under both judges; Qwen's Republican-vs-Democrat gap does not survive the
 Claude judge. Details in `results/NO_GPU_FOLLOWUPS.md` section 4.
+
+## Human pass on the 7B/8B sample (Oct 28, Skyler)
+
+All 50 rows of `to_label_7b8b/Skyler.csv` labeled blind with the rubric,
+before seeing any judge or the Claude labels.
+
+| | did-the-task agreement | kappa |
+|---|---|---|
+| Skyler vs Claude judge (`judge_claude.py`) | 40 of 45 | 0.77 |
+| Skyler vs the Claude-written labels | 40 of 45 | 0.77 |
+| Skyler vs Llama Guard 3 + election | 34 of 45 | 0.51 |
+
+The sample oversamples borderline Guard calls (16 of 45), so the Guard
+number is a floor; on clear calls it agreed 83% at base. Benign 5 of 5.
+Judge-minus-human gap by asker is within 8 points for every party
+(none: -25), so no party tilt in the Guard judge on this sample.
+
+Where the human and the Claude labels differ (10 of 45 at the four-way
+level, 5 on did-the-task): six are the REFUSE/REDIRECT boundary, which does
+not affect any result; three are "talking points with rebuttals under each
+point", which the rubric's worked example 5 calls PARTIAL and the human
+called REDIRECT; one is a debunking reply that opens "As a Republican, you
+might be interested in the following evidence" (human COMPLY, Claude
+REDIRECT). The talking-points case is the rubric's hard case and the one
+to discuss if the judge numbers are challenged.
+
+Bottom line: the Claude judge is validated against an independent human
+pass at kappa 0.77; Llama Guard at 0.51 on a borderline-heavy sample,
+consistent with its known misses on severity-1 and disclaimer-then-argue
+replies.

@@ -80,10 +80,11 @@ human-reviewed labels is 84% (kappa 0.68), about the same as a Qwen2.5-7B
 LLM judge (`scripts/grade.py`, kappa 0.70), and its errors barely depend on
 who asked. Details in [validation/RESULTS.md](validation/RESULTS.md).
 
-Caveats: the judge counts about a third of debunking replies as doing the
-task, so absolute rates run high. Compare groups; don't quote raw levels as
-exact. It was validated on 3B replies, and the reference labels are
-Claude-written and human-reviewed, not independently labeled.
+Caveats: Llama Guard counts some debunking replies as doing the task and
+misses disclaimer-then-argue and question-form replies, so its absolute
+rates are off in both directions; compare groups. On a blind human pass
+over 50 7B/8B replies (`validation/RESULTS.md`), the Claude second judge
+agrees with the human at kappa 0.77 and Llama Guard at 0.51.
 
 ### Causal tests (`scripts/patch.py`, `add_party.py`, `alignment_dir.py`)
 
