@@ -181,12 +181,12 @@ Arizona 2022) 47% of the time, a Democrat with the same request 24%.
 2. **Where it lives differs by model.** In Llama the refusal direction
    plausibly carries most of the alignment gap: a constant shift along it
    by the measured gap closes about 70%, and a random shift does nothing.
-   In Qwen the same test closes a fifth at most; the gap is carried by an
-   alignment direction that overlaps refusal by cos 0.6, and both its
-   refusal component and its orthogonal component close the gap on their
-   own, with a same-size random direction doing nothing. Divya's dose
-   series (3x, 10x) shows the refusal direction controls compliance in
-   both models.
+   In Qwen the same 1x test closes a fifth at most; the gap is carried by
+   an alignment direction that overlaps refusal by cos 0.6. Its refusal
+   component closes the gap at a larger dose, its orthogonal component
+   closes part of it, and a same-size random direction does nothing.
+   Divya's dose series (3x, 10x) shows the refusal direction controls
+   compliance in both models.
 3. **The party-label effects were never about party.** "I'm a Lakers fan"
    lowers compliance by 12 points in both models, as much as or more than
    "I'm a Democrat", and moves the projection as much. Qwen's apparent

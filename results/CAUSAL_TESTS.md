@@ -37,7 +37,7 @@ All comparisons raise the lower-projection group (**aligned**, and
 | Each prompt set to its **own** group mean (control: gap unchanged) | 46%, p = 0.24 | 65%, p = 0.33 | 10%, p = 0.04 | 22%, p = 0.005 |
 | **Constant shift by the gap, 1x (the clean test)** | **39%, p = 1.0** | **57%, p = 0.23** | **13%, p = 0.09** | **29%, p = 0.016** |
 | share of the gap closed by the 1x shift | 5% | 23% | 64% | 70% |
-| Constant shift 2x, with random control (Oct 28, Divya's follow-up) | | | **11%, p = 0.02**; random 16%, n.s. | PENDING |
+| Constant shift 2x, with random control (Oct 28, Divya's follow-up) | | | **11%, p = 0.02**; random 16%, n.s. | **24%, p = 0.00024**; random 34%, n.s.; 130% of gap |
 | Constant shift 3x | 31%, p = 0.02 | | 10%, p = 0.008 | |
 | Constant shift 10x | 15%, p < 1e-7 | | 0%, p < 1e-7 | |
 | 10x shift along a random direction | 41% | | 14% | |
@@ -52,9 +52,9 @@ All comparisons raise the lower-projection group (**aligned**, and
   exactly the measured gap (0.14 units) closes 64-70% of it: significant
   under the Claude judge (p = 0.016), short of it under Guard (p = 0.09)
   at 136 prompts. Divya's suggested follow-up, a 2x shift with a random
-  control, run Oct 28: closes 91% of the gap (18% to 11%, p = 0.02), landing
-  on the crossed rate, while the same shift along a random direction does
-  nothing (16%, n.s.).
+  control, run Oct 28: closes 91% of the gap under Guard (18% to 11%, p = 0.02) and
+  130% under Claude (34% to 24%, p = 0.00024), landing on the crossed rate,
+  while the same shift along a random direction does nothing (34% Claude, 16% Guard, n.s.).
 - **Qwen: the refusal direction carries little of the gap.** The 1x shift
   (1.56 units) closes 5% (Guard) to 23% (Claude), neither significant.
   The direction does control Qwen's compliance: 3x closes 63% and 10x
@@ -288,24 +288,28 @@ constant shift, not her 1x.
 |---|---|---|
 | norm of a / par / perp | 3.37 / 2.03 / 2.69 | 0.90 / 0.19 / 0.88 |
 
-"Did the task", aligned / crossed, and the resulting gap (Guard judge;
-Claude judge in the row below each where available):
+"Did the task", aligned / crossed, and the resulting gap, under both judges:
 
-| Condition | Qwen aligned / crossed | Qwen gap | Llama aligned / crossed | Llama gap |
-|---|---|---|---|---|
-| base | 40% / 26% | +14 | 18% / 10% | +8 |
-| par: refusal component only | 35% / 34% | **+1** | 13% / 17% | **-4** |
-| perp: orthogonal component only | 35% / 36% | **-1** | 27% / 14% | +13 |
-| full: a | 28% / 39% | -11 | 17% / 19% | -2 |
-| rand: same norm, random | 40% / 27% | +13 | 15% / 15% | +1 |
+| Condition | Qwen Guard | gap | Qwen Claude | gap | Llama Guard | gap | Llama Claude | gap |
+|---|---|---|---|---|---|---|---|---|
+| base | 40% / 26% | +14 | 62% / 49% | +13 | 18% / 10% | +8 | 33% / 26% | +7 |
+| par: refusal component only | 35% / 34% | **+1** | 56% / 54% | **+2** | 13% / 17% | **-4** | 26% / 30% | **-4** |
+| perp: orthogonal component only | 35% / 36% | **-1** | 57% / 51% | +7 | 27% / 14% | +13 | 42% / 26% | +16 |
+| full: a | 28% / 39% | -11 | 54% / 51% | +2 | 17% / 19% | -2 | 35% / 35% | -1 |
+| rand: same norm, random | 40% / 27% | +13 | 60% / 48% | +13 | 15% / 15% | +1 | 32% / 29% | +2 |
 
-- **Qwen: both components are causally active and they add.** The refusal
-  component alone closes the gap (at a 2.6x dose, consistent with Divya's
-  3x shift closing 63%); the orthogonal component alone also closes it,
-  while a random direction of the same size does nothing, so it is a real
-  direction, not a perturbation effect. Together they reverse the gap.
-  The section-D inference is half right: the orthogonal part does
-  gap-sized work on its own, but so does the parallel part at this dose.
+Opus-vs-Sonnet did-the-task agreement on the rechecks: 134 of 136.
+
+- **Qwen: the refusal component closes the gap; the orthogonal component
+  does part of it.** The refusal component alone closes the gap under
+  both judges (at a 2.6x dose, consistent with Divya's 3x shift closing
+  63%). The orthogonal component alone closes it under Guard and about
+  half of it under Claude (13 to 7, not significant on its own), while a
+  random direction of the same size does nothing under either judge, so it
+  is a real direction with a real but smaller effect. The section-D
+  inference that the orthogonal part "does the work" was too strong: at
+  this dose the refusal component does the work, and the orthogonal part
+  adds to it.
 - **Llama: only the refusal component carries the gap.** The orthogonal
   component raises compliance in both groups whichever way it is applied
   (aligned 18 to 27, crossed 10 to 14), which is an off-direction
@@ -313,5 +317,8 @@ Claude judge in the row below each where available):
   A found.
 - **Model split, restated.** Llama encodes "the other side's claim" as
   more refusal-like, full stop. Qwen encodes it as more refusal-like *and*
-  along a second direction that the refusal direction does not see, and
-  either part suffices to move behavior at this dose.
+  along a second direction that the refusal direction does not see; the
+  refusal-like part moves behavior at this dose, the second part moves it
+  less. Why Divya's 1x refusal shift does so little in Qwen while the
+  alignment direction's refusal component does so much is the dose: ±2.03
+  units between the groups is 2.6x the measured 1.56-unit gap.
