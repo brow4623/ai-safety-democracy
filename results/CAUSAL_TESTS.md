@@ -37,6 +37,7 @@ All comparisons raise the lower-projection group (**aligned**, and
 | Each prompt set to its **own** group mean (control: gap unchanged) | 46%, p = 0.24 | 65%, p = 0.33 | 10%, p = 0.04 | 22%, p = 0.005 |
 | **Constant shift by the gap, 1x (the clean test)** | **39%, p = 1.0** | **57%, p = 0.23** | **13%, p = 0.09** | **29%, p = 0.016** |
 | share of the gap closed by the 1x shift | 5% | 23% | 64% | 70% |
+| Constant shift 2x, with random control (Oct 28, Divya's follow-up) | | | **11%, p = 0.02**; random 16%, n.s. | PENDING |
 | Constant shift 3x | 31%, p = 0.02 | | 10%, p = 0.008 | |
 | Constant shift 10x | 15%, p < 1e-7 | | 0%, p < 1e-7 | |
 | 10x shift along a random direction | 41% | | 14% | |
@@ -47,11 +48,13 @@ All comparisons raise the lower-projection group (**aligned**, and
   18% to 10% (Guard) and 34% to 22% (Claude). So most of what "set to the
   crossed mean" measures in Llama is the removal of spread across prompts,
   not the gap. The constant shift is the number to quote.
-- **Llama: the refusal direction plausibly carries most of the gap.** A
-  constant shift by exactly the measured gap (0.14 units) closes 64-70% of
-  it: significant under the Claude judge (p = 0.016), short of it under
-  Guard (p = 0.09) at 136 prompts. Divya's suggested follow-up, a 2x
-  shift or more prompts, would settle it.
+- **Llama: the refusal direction carries the gap.** A constant shift by
+  exactly the measured gap (0.14 units) closes 64-70% of it: significant
+  under the Claude judge (p = 0.016), short of it under Guard (p = 0.09)
+  at 136 prompts. Divya's suggested follow-up, a 2x shift with a random
+  control, run Oct 28: closes 91% of the gap (18% to 11%, p = 0.02), landing
+  on the crossed rate, while the same shift along a random direction does
+  nothing (16%, n.s.).
 - **Qwen: the refusal direction carries little of the gap.** The 1x shift
   (1.56 units) closes 5% (Guard) to 23% (Claude), neither significant.
   The direction does control Qwen's compliance: 3x closes 63% and 10x
@@ -193,7 +196,7 @@ replies.
 | Prediction | Verdict |
 |---|---|
 | A1 Qwen: projection matching closes < 25% of the alignment gap | **Held.** Clean 1x shift: 5% (Guard), 23% (Claude), neither significant. |
-| A1 Llama: (amended) about 40% closed under Claude | **Exceeded, with Divya's clean test.** 1x constant shift closes 70% (Claude, p = 0.016) / 64% (Guard, p = 0.09). The pre-registered set-to-mean version overshoots (150-220%) but is confounded by spread removal (own-mean control). |
+| A1 Llama: (amended) about 40% closed under Claude | **Exceeded, with Divya's clean test.** 1x constant shift closes 70% (Claude, p = 0.016) / 64% (Guard, p = 0.09); 2x closes 91% (Guard, p = 0.02), random control flat. The pre-registered set-to-mean version overshoots (150-220%) but is confounded by spread removal (own-mean control). |
 | A2: party matching moves Democrats toward refusal by < 5 points | **Held** with the clean shift: 1-3 points in both models, n.s. The set-to-mean version in Llama (16% to 3%) is the same spread artifact. |
 | B: induced refusal symmetric, < 10% of rise, p > 0.05 | **Magnitude held** (< 1%); p-value bar failed in Llama at coeff 1 and Qwen at coeff 2. |
 | C: fan within 5 points of voter | **Failed in both models** under Claude (-12 in each, p < 0.01); under Guard failed in Qwen (-11) and held in Llama (-4, n.s.). |
@@ -227,9 +230,6 @@ replies.
   closest controls are the random shifts in A (1.56 units and 15.6 units
   in Qwen, 0.14 and 1.4 in Llama), all flat. `alignment_decompose.py`
   adds a same-norm random control.
-- Llama's 64-70% in A is from 136 prompts; Divya's suggested 2x shift (or
-  more prompts) would settle whether the direction carries most or all of
-  Llama's gap.
 - The decomposition (H) uses a bidirectional shift, so its dose is about
   2.6x the measured gap; a 1x version of the par/perp split would match
   Divya's clean test exactly.

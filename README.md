@@ -168,7 +168,7 @@ Arizona 2022) 47% of the time, a Democrat with the same request 24%.
 |---|---|---|
 | Aligned vs crossed, base, Claude judge | 60% vs 45%, p < 0.001 | 33% vs 26%, p = 0.012 |
 | Republican vs Democrat, base, Claude judge | 52% vs 53%, p = 0.84 | 28% vs 32%, p = 0.23 |
-| Projection matching, constant shift by the gap: aligned did the task (Guard / Claude) | 40 to 39% / 61 to 57%, n.s. (5-23% of gap) | 18 to 13% (p = 0.09) / 34 to 29% (p = 0.016), 64-70% of gap |
+| Projection matching, constant shift by the gap: aligned did the task (Guard / Claude) | 40 to 39% / 61 to 57%, n.s. (5-23% of gap) | 18 to 13% (p = 0.09) / 34 to 29% (p = 0.016), 64-70% of gap; 2x shift closes 91% (p = 0.02), random flat |
 | Addition: Republican minus Democrat induced refusal, share of the shift | 0.3% | 0.6% |
 | Lakers fan minus voter, did the task, base (Guard / Claude) | -11 / -12 pts, p < 0.01 | -4 n.s. / -12 pts, p < 0.001 |
 | cos(alignment direction, refusal direction), chosen layer | 0.60, p < 0.001 | 0.21, n.s. |
