@@ -5,6 +5,8 @@
   method          Arditi et al.'s method as a schematic: find the refusal direction,
                   remove it, add it (illustrative points, not data)
   headline      did the task: Democrat vs Republican and aligned vs crossed
+  headline a-c    simpler versions for the punchline slide: bars (A), the two gaps
+                  only (B), and one-judge dumbbells (C)
   identity        each stated identity minus "I'm a voter" on matched pairs, with
                   the Lakers-fan control
   ablation        aligned and crossed, base -> refusal direction ablated
@@ -28,7 +30,7 @@ matplotlib and pandas.
 Figures say "own side" / "other side" for the aligned / crossed prompts, and "side direction" for the
 alignment direction.
 
-Writes figures/slide_design.png, slide_method.png, slide_headline.png, slide_identity.png, slide_ablation.png,
+Writes figures/slide_design.png, slide_method.png, slide_headline.png (and _a, _b, _c), slide_identity.png, slide_ablation.png,
 slide_request_format.png, slide_shift_dose.png, slide_alignment_cosine.png.
 
 Usage: uv run python scripts/slide_figures.py Qwen2.5-7B-Instruct Llama-3.1-8B-Instruct
@@ -330,6 +332,119 @@ def headline(models):
     finish(fig, handles, note, "slide_headline.png", height, ncol=4)
 
 
+# Simpler takes on the headline, for the punchline slide. Options A and C show the Claude judge only (the one
+# validated against a blind human pass); option B shows just the two gaps, under both judges.
+HEADLINE_NOTE_CLAUDE = ("Claude judge (agrees with a blind human pass at κ = 0.77), first generation run. "
+                        "Stolen-election prompts, 136 matched pairs per comparison, exact McNemar tests. "
+                        "Llama Guard 3 shows the same pattern.")
+
+
+def finish_plain(fig, note, out, height):
+    """finish() without a legend, for figures whose marks are labeled directly."""
+    fig.text(0.01, 0.005, note, fontsize=8, color=MUTED, va="bottom")
+    fig.tight_layout(rect=(0, (0.12 + 0.14 * (note.count("\n") + 1)) / height, 1, 1))
+    fig.savefig(FIG / out, dpi=200)
+    plt.close(fig)
+
+
+def gap_label(diff, p):
+    unit = "pt" if round(abs(diff)) == 1 else "pts"
+    return f"{pts(diff)} {unit}, " + ("not significant" if p >= 0.05 else fmt_p(p))
+
+
+def headline_bars(models):
+    """Option A: bars with their values, Claude judge only."""
+    rates = headline_rates("claude-judge")
+    groups = [("Republican vs Democrat", [("Democrat", 1, INK2), ("Republican", 0, AXIS)]),
+              ("crossed vs aligned", [("Own side", 1, BLUE), ("Other side", 0, ORANGE)])]
+    height = 4.2
+    fig, axes = plt.subplots(1, len(models), figsize=(W * len(models), height), sharey=True, squeeze=False)
+    for j, model in enumerate(models):
+        ax = axes[0, j]
+        ticks, labels = [], []
+        for g, (comp, bars) in enumerate(groups):
+            vals = rates[(model, comp)]                      # (A, B, p): A = Republican / crossed
+            for k, (label, idx, color) in enumerate(bars):
+                x = g * 1.1 + (k - 0.5) * 0.42
+                v = 100 * vals[idx]
+                ax.bar(x, v, width=0.36, color=color, zorder=3)
+                ax.text(x, v + 1.5, f"{v:.0f}%", ha="center", va="bottom", fontsize=11, color=INK)
+                ticks.append(x)
+                labels.append(label)
+            top = 100 * max(vals[0], vals[1])
+            ax.text(g * 1.1, top + 10, gap_label(100 * (vals[1] - vals[0]), vals[2]), ha="center", va="bottom",
+                    fontsize=10, color=INK2)
+        ax.set_xticks(ticks, labels)
+        ax.tick_params(axis="x", length=0, labelsize=10.5, labelcolor=INK2)
+        ax.set_ylim(0, 85)
+        ax.set_xlim(-0.55, 1.65)
+        if j == 0:
+            ax.set_ylabel("Did the task (%)")
+        ax.set_title(SHORT[model], loc="left")
+    finish_plain(fig, HEADLINE_NOTE_CLAUDE, "slide_headline_a.png", height)
+
+
+def headline_gaps(models):
+    """Option B: only the two gaps per model, both judges. The party gap sits at zero; the own-side gap doesn't."""
+    rates = {j: headline_rates(j) for j, _ in JUDGES}
+    panels = [("Republican vs Democrat", "Democrat minus Republican", INK2),
+              ("crossed vs aligned", "Own side minus other side", BLUE)]
+    height = 3.4
+    fig, axes = plt.subplots(1, 2, figsize=(2 * W, height), sharex=True, sharey=True)
+    for ax, (comp, title, color) in zip(axes, panels):
+        ax.grid(axis="y", visible=False)
+        ax.grid(axis="x", visible=True)
+        ax.axvline(0, color=AXIS, lw=1.2, zorder=1)
+        for r, model in enumerate(models):
+            y = len(models) - 1 - r
+            for k, (judge, _) in enumerate(JUDGES):
+                a, b, p = rates[judge][(model, comp)]
+                gap, yy = 100 * (b - a), y + (0.14 if k == 0 else -0.14)
+                mark(ax, gap, yy, color, judge, size=9)
+                ax.annotate(gap_label(gap, p), (gap, yy), xytext=(9, 0), textcoords="offset points",
+                            va="center", fontsize=9.5, color=INK2)
+        ax.set_yticks(range(len(models)), [SHORT[m] for m in reversed(models)])
+        ax.set_ylim(-0.6, len(models) - 0.4)
+        ax.set_xlim(-8, 30)
+        ax.set_xlabel("Difference in did-the-task rate (percentage points)")
+        ax.set_title(title, loc="left")
+    note = ("Stolen-election prompts, 136 matched pairs per comparison, exact McNemar tests. Claude judge: first "
+            "generation run; Llama Guard 3: 920-prompt rerun.")
+    finish(fig, judge_handles(), note, "slide_headline_b.png", height)
+
+
+def headline_simple(models):
+    """Option C: the dumbbells again, Claude judge only, one panel per comparison, values on the dots."""
+    rates = headline_rates("claude-judge")
+    panels = [("Republican vs Democrat", "Democrat vs Republican", ("Dem", "Rep"), (INK2, AXIS)),
+              ("crossed vs aligned", "Own side vs other side", ("own side", "other side"), (BLUE, ORANGE))]
+    height = 3.4
+    fig, axes = plt.subplots(1, 2, figsize=(2 * W, height), sharex=True, sharey=True)
+    for ax, (comp, title, (lab_b, lab_a), (col_b, col_a)) in zip(axes, panels):
+        ax.grid(axis="y", visible=False)
+        ax.grid(axis="x", visible=True)
+        for r, model in enumerate(models):
+            y = len(models) - 1 - r
+            a, b, p = rates[(model, comp)]
+            va, vb = 100 * a, 100 * b
+            ax.plot([va, vb], [y, y], color=GRID, lw=3, solid_capstyle="round", zorder=2)
+            ax.plot(va, y, ls="", marker="o", ms=11, color=col_a, zorder=3)
+            ax.plot(vb, y, ls="", marker="o", ms=11, color=col_b, zorder=3)
+            (lx, ll), (rx, rl) = sorted([(va, lab_a), (vb, lab_b)])
+            ax.annotate(f"{ll} {lx:.0f}%", (lx, y), xytext=(-10, 0), textcoords="offset points", ha="right",
+                        va="center", fontsize=10.5, color=INK2)
+            ax.annotate(f"{rl} {rx:.0f}%", (rx, y), xytext=(10, 0), textcoords="offset points", ha="left",
+                        va="center", fontsize=10.5, color=INK2)
+            ax.annotate(gap_label(vb - va, p), ((va + vb) / 2, y), xytext=(0, 12), textcoords="offset points",
+                        ha="center", va="bottom", fontsize=9.5, color=MUTED)
+        ax.set_yticks(range(len(models)), [SHORT[m] for m in reversed(models)])
+        ax.set_ylim(-0.6, len(models) - 0.3)
+        ax.set_xlim(0, 85)
+        ax.set_xlabel("Did the task (%)")
+        ax.set_title(title, loc="left")
+    finish_plain(fig, HEADLINE_NOTE_CLAUDE, "slide_headline_c.png", height)
+
+
 # ----------------------------------------------------------------- identity
 
 def identity_gaps(model):
@@ -613,6 +728,9 @@ def main():
     design()
     method()
     headline(models)
+    headline_bars(models)
+    headline_gaps(models)
+    headline_simple(models)
     identity(models)
     ablation(models)
     request_format(models)
