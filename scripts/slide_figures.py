@@ -6,7 +6,8 @@
                   remove it, add it (illustrative points, not data)
   headline      did the task: Democrat vs Republican and aligned vs crossed
   headline a-c    simpler versions for the punchline slide: bars (A), the two gaps
-                  only (B), and one-judge dumbbells (C)
+                  only (B), and one-judge dumbbells (C); plus a paper-style version of A
+                  with 95% intervals and significance brackets
   identity        each stated identity minus "I'm a voter" on matched pairs, with
                   the Lakers-fan control
   ablation        aligned and crossed, base -> refusal direction ablated
@@ -445,6 +446,67 @@ def headline_simple(models):
     finish_plain(fig, HEADLINE_NOTE_CLAUDE, "slide_headline_c.png", height)
 
 
+def wilson(p, n, z=1.96):
+    """95% Wilson interval for a proportion, as (low, high)."""
+    centre = (p + z * z / (2 * n)) / (1 + z * z / n)
+    half = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
+    return centre - half, centre + half
+
+
+def stars(p):
+    return "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "n.s."
+
+
+def headline_academic(models, n=136):
+    """Paper-style version of option A: serif type, framed axes, 95% intervals and significance brackets."""
+    rates = headline_rates("claude-judge")
+    groups = [("Republican vs Democrat", [("Democrat", 1, "#4d4d4d"), ("Republican", 0, "#bdbdbd")]),
+              ("crossed vs aligned", [("Own side", 1, BLUE), ("Other side", 0, ORANGE)])]
+    height = 4.4
+    with plt.rc_context({"font.family": "serif", "font.serif": ["Times New Roman", "STIX Two Text", "DejaVu Serif"],
+                         "mathtext.fontset": "stix", "axes.spines.top": True, "axes.spines.right": True,
+                         "axes.edgecolor": INK, "axes.linewidth": 0.8, "axes.grid": False,
+                         "xtick.direction": "in", "ytick.direction": "in", "xtick.color": INK, "ytick.color": INK,
+                         "axes.labelcolor": INK, "axes.titleweight": "normal", "font.size": 12,
+                         "axes.facecolor": "white", "figure.facecolor": "white", "savefig.facecolor": "white"}):
+        fig, axes = plt.subplots(1, len(models), figsize=(W * len(models), height), sharey=True, squeeze=False)
+        for j, model in enumerate(models):
+            ax = axes[0, j]
+            ticks, labels = [], []
+            for g, (comp, bars) in enumerate(groups):
+                vals = rates[(model, comp)]
+                xs, tops = [], []
+                for k, (label, idx, color) in enumerate(bars):
+                    x = g * 1.1 + (k - 0.5) * 0.42
+                    v = vals[idx]
+                    lo, hi = wilson(v, n)
+                    ax.bar(x, 100 * v, width=0.36, color=color, edgecolor=INK, linewidth=0.8, zorder=2)
+                    ax.errorbar(x, 100 * v, yerr=[[100 * (v - lo)], [100 * (hi - v)]], fmt="none", ecolor=INK,
+                                elinewidth=1, capsize=4, zorder=3)
+                    xs.append(x)
+                    tops.append(100 * hi)
+                    ticks.append(x)
+                    labels.append(label)
+                y = max(tops) + 4
+                ax.plot([xs[0], xs[0], xs[1], xs[1]], [y - 1.5, y, y, y - 1.5], color=INK, lw=0.9)
+                ax.text(sum(xs) / 2, y + 0.8, stars(vals[2]), ha="center", va="bottom",
+                        fontsize=13 if vals[2] < 0.05 else 11)
+            ax.set_xticks(ticks, labels)
+            ax.tick_params(axis="x", length=0)
+            ax.set_ylim(0, 85)
+            ax.set_xlim(-0.55, 1.65)
+            if j == 0:
+                ax.set_ylabel("Did the task (%)")
+            ax.set_title(f"({'ab'[j]}) {SHORT[model]}", loc="left", fontsize=13)
+        note = ("Claude judge, first generation run; stolen-election prompts, n = 136 matched pairs per comparison. "
+                "Error bars: 95% Wilson intervals.\nBrackets: exact McNemar test on matched pairs "
+                "(*** p < 0.001, * p < 0.05, n.s. not significant). Llama Guard 3 shows the same pattern.")
+        fig.text(0.01, 0.005, note, fontsize=9, color=INK2, va="bottom")
+        fig.tight_layout(rect=(0, 0.45 / height, 1, 1))
+        fig.savefig(FIG / "slide_headline_academic.png", dpi=200)
+        plt.close(fig)
+
+
 # ----------------------------------------------------------------- identity
 
 def identity_gaps(model):
@@ -731,6 +793,7 @@ def main():
     headline_bars(models)
     headline_gaps(models)
     headline_simple(models)
+    headline_academic(models)
     identity(models)
     ablation(models)
     request_format(models)
