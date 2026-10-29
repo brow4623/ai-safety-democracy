@@ -15,6 +15,8 @@
   shift dose      aligned prompts shifted along the refusal direction by 1-10x
                   the measured gap, against the crossed level, with the
                   random-direction control
+  shift dose a-c  simpler versions for slide 19, one judge each: before/after bars at 1x
+                  (A), the share of the gap closed (B), and the dose curve to 3x (C)
   alignment cos   cos(alignment direction, refusal direction) by layer, with the
                   layers where the crossed-minus-aligned gap is significant shaded
 
@@ -32,7 +34,7 @@ Figures say "own side" / "other side" for the aligned / crossed prompts, and "si
 alignment direction.
 
 Writes figures/slide_design.png, slide_method.png, slide_headline.png (and _a, _b, _c), slide_identity.png, slide_ablation.png,
-slide_request_format.png, slide_shift_dose.png, slide_alignment_cosine.png.
+slide_request_format.png, slide_shift_dose.png (and _a, _b, _c), slide_alignment_cosine.png.
 
 Usage: uv run python scripts/slide_figures.py Qwen2.5-7B-Instruct Llama-3.1-8B-Instruct
 """
@@ -740,6 +742,100 @@ def shift_dose(models):
     finish(fig, handles, note, "slide_shift_dose.png", height, ncol=3, right=0.97)
 
 
+def shift_rates(model, judge):
+    """Own-side did-the-task (%) by push size, the random-direction rates, and the other side's level."""
+    pts, rand = dose_points(model)[judge]
+    return ({k: 100 * v for k, v in pts.items()}, {k: 100 * v for k, v in rand.items()},
+            100 * crossed_level(model, judge))
+
+
+def gap_closed(base, pushed, target):
+    return 100 * (base - pushed) / (base - target)
+
+
+def shift_bars(models):
+    """Option A: own side before and after a 1x push, next to the other side; Claude judge only."""
+    height = 4.2
+    fig, axes = plt.subplots(1, len(models), figsize=(W * len(models), height), sharey=True, squeeze=False)
+    for j, model in enumerate(models):
+        ax = axes[0, j]
+        pts, _, target = shift_rates(model, "claude-judge")
+        bars = [("Own side", pts[0], {"color": BLUE}),
+                ("Own side,\npushed 1×", pts[1], {"color": SURFACE, "edgecolor": BLUE, "hatch": "///", "lw": 1.4}),
+                ("Other side", target, {"color": ORANGE})]
+        for x, (_, v, kw) in enumerate(bars):
+            ax.bar(x, v, width=0.6, zorder=3, **kw)
+            ax.text(x, v + 1.5, f"{v:.0f}%", ha="center", va="bottom", fontsize=11, color=INK)
+        ax.text(1, max(pts[0], target) + 12, f"push closes {gap_closed(pts[0], pts[1], target):.0f}% of the gap",
+                ha="center", va="bottom", fontsize=10, color=INK2)
+        ax.set_xticks(range(len(bars)), [b[0] for b in bars])
+        ax.tick_params(axis="x", length=0, labelsize=10.5, labelcolor=INK2)
+        ax.set_ylim(0, 85)
+        ax.set_xlim(-0.6, 2.6)
+        if j == 0:
+            ax.set_ylabel("Did the task (%)")
+        ax.set_title(SHORT[model], loc="left")
+    finish_plain(fig, "Claude judge. Own-side prompts (n = 136) pushed along the refusal direction at the chosen "
+                      "layer by exactly the measured other-minus-own-side gap (1×).", "slide_shift_dose_a.png", height)
+
+
+def shift_closed(models):
+    """Option B: one number per test, the share of the own-side gap closed; Claude judge only."""
+    rows = []
+    for model in reversed(models):              # Llama first: the slide title is about Llama
+        pts, rand, target = shift_rates(model, "claude-judge")
+        for k in sorted(k for k in pts if k):
+            rows.append((f"{SHORT[model]}, push = {k}× the gap", gap_closed(pts[0], pts[k], target), BLUE))
+        for k, v in sorted(rand.items()):
+            rows.append((f"Control: {SHORT[model]}, {k}× push\nin a random direction", gap_closed(pts[0], v, target),
+                         MUTED))
+    rows.sort(key=lambda r: r[2] == MUTED)        # the control goes last
+    height = 3.6
+    fig, ax = plt.subplots(figsize=(W * len(models), height))
+    ys = np.arange(len(rows))[::-1]
+    for y, (_, v, color) in zip(ys, rows):
+        ax.barh(y, v, height=0.55, color=color, zorder=3)
+        ax.text(max(v, 0) + 2, y, f"{v:.0f}%", ha="left", va="center", fontsize=11, color=INK)
+    ax.axvline(100, color=INK2, lw=1, ls=(0, (4, 2)), zorder=2)
+    ax.text(101.5, ys[0] + 0.5, "gap fully closed", ha="left", va="center", fontsize=10, color=INK2)
+    ax.set_yticks(ys, [r[0] for r in rows])
+    ax.tick_params(axis="y", length=0, labelsize=10.5, labelcolor=INK2)
+    ax.grid(axis="y", visible=False)
+    ax.grid(axis="x", visible=True)
+    ax.set_xlim(0, 145)
+    ax.set_ylim(-0.6, len(rows) - 0.1)
+    ax.set_xlabel("Share of the own-side gap closed (%)")
+    finish_plain(fig, "Claude judge. Gap closed = (own side before − own side pushed) ÷ (own side before − other "
+                      "side). Qwen was run at 1× only under this judge.", "slide_shift_dose_b.png", height)
+
+
+def shift_line(models):
+    """Option C: the dose curve with one judge (Llama Guard 3, the one run at every push size), no random
+    control and no 10x, so no axis break."""
+    height = 4.2
+    fig, axes = plt.subplots(1, len(models), figsize=(W * len(models), height), sharey=True, squeeze=False)
+    for j, model in enumerate(models):
+        ax = axes[0, j]
+        pts, _, target = shift_rates(model, "guard3-election")
+        xs = [k for k in sorted(pts) if k <= 3]
+        ax.axhline(target, color=ORANGE, lw=1.6, ls=(0, (4, 2)), zorder=2)
+        ax.plot(xs, [pts[k] for k in xs], color=BLUE, lw=2, marker="o", ms=8, zorder=3)
+        for k in xs:
+            ax.text(k, pts[k] + 2.5, f"{pts[k]:.0f}%", ha="center", va="bottom", fontsize=10, color=INK)
+        ax.set_xticks([0, 1, 2, 3], ["none", "1×", "2×", "3×"])
+        ax.set_xlim(-0.3, 3.3)
+        ax.set_ylim(0, 50)
+        if j == 0:
+            ax.set_ylabel("Own-side prompts: did the task (%)")
+        # "Gap" alone reads as the behavior gap; the push is sized by the gap inside the model.
+        ax.set_xlabel("Push along the refusal direction\n(× how much higher other-side prompts sit on it)")
+        ax.set_title(SHORT[model], loc="left")
+    handles = [Line2D([], [], color=BLUE, lw=2, marker="o", ms=8, label="own side, pushed along the refusal direction"),
+               Line2D([], [], color=ORANGE, lw=1.6, ls=(0, (4, 2)), label="other side, no push (the target)")]
+    finish(fig, handles, "Llama Guard 3 judge, the one run at every push size. Own-side prompts (n = 136). Qwen was "
+                         "not run at 2×.", "slide_shift_dose_c.png", height)
+
+
 # ------------------------------------------------------------ alignment cos
 
 def alignment_cosine(models):
@@ -798,6 +894,9 @@ def main():
     ablation(models)
     request_format(models)
     shift_dose(models)
+    shift_bars(models)
+    shift_closed(models)
+    shift_line(models)
     alignment_cosine(models)
     for model in models:
         print(f"\n===== {model}")
