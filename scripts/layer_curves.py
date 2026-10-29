@@ -166,7 +166,7 @@ def label_ends(ax, ends):
 
 
 def party_gap(gaps, models, keep=None, out="party_gap_by_layer.png"):
-    rows = [("crossed vs aligned", "Crossed minus aligned\n(% of stolen-minus-benign gap)"),
+    rows = [("crossed vs aligned", "Other side minus own side\n(% of stolen-minus-benign gap)"),
             ("Republican vs Democrat", "Republican minus Democrat\n(% of stolen-minus-benign gap)"),
             ("party vs fan", "Party label minus Lakers fan\n(% of stolen-minus-benign gap)")]
     rows = [r for r in rows if r[0] in set(gaps.comparison) and (keep is None or r[0] in keep)]
